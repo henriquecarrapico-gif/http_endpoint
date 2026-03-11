@@ -44,7 +44,7 @@ def uplink():
     with conn.cursor() as cur:
         cur.execute(
             """
-            INSERT INTO observations
+            INSERT INTO detections
                 (dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr)
             VALUES (%s, %s, %s, %s, %s, %s, %s)
             """,
