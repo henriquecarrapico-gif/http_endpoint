@@ -41,16 +41,21 @@ def uplink():
         rssi = rx_info[0].get("rssi")
         snr  = rx_info[0].get("snr")
 
-    with conn.cursor() as cur:
-        cur.execute(
-            """
-            INSERT INTO detections
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO detections
+                    (dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
                 (dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr)
-            VALUES (%s, %s, %s, %s, %s, %s, %s)
-            """,
-            (dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr)
-        )
-        conn.commit()
+            )
+            conn.commit()
+    except Exception as e:
+        conn.rollback()
+        app.logger.error(f"DB insert failed, rolled back: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
     return jsonify({"status": "ok"}), 200
 
