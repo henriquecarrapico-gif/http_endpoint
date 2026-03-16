@@ -6,11 +6,11 @@ import os
 app = Flask(__name__)
 
 # PostgreSQL connection settings
-DB_HOST = os.getenv("DB_HOST", "localhost")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "chirpstack")
-DB_USER = os.getenv("DB_USER", "postgres")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "password")
+DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
+DB_PORT = os.getenv("POSTGRES_PORT", "5432")
+DB_NAME = os.getenv("POSTGRES_DB", "chirpstack")
+DB_USER = os.getenv("POSTGRES_USER", "postgres")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
 
 conn = psycopg2.connect(
     host=DB_HOST,
@@ -19,6 +19,20 @@ conn = psycopg2.connect(
     user=DB_USER,
     password=DB_PASSWORD
 )
+
+@app.route("/", methods=["GET"])
+def index():
+    endpoints = {}
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint != 'static':
+            methods = ', '.join(sorted([m for m in rule.methods if m not in ['OPTIONS', 'HEAD']]))
+            endpoints[rule.rule] = f"Methods: {methods}"
+            
+    return jsonify({
+        "service": "DIVS Gateway HTTP Endpoint",
+        "description": "Flask API for handling Chirpstack integrations",
+        "endpoints": endpoints
+    }), 200
 
 @app.route("/uplink", methods=["POST"])
 def uplink():
