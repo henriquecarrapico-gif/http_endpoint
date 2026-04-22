@@ -1,0 +1,6 @@
+{
+    "deviceInfo": {"devEui": "1122334455667788"},
+    "time": "2026-03-12T12:37:22Z",
+    "object": {"type_code": 1,"azimuth": 120,"secs_since_midnight": 45000},
+    "rxInfo": [{"rssi": -90, "snr": 5.5}]
+    }
