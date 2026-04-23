@@ -158,6 +158,7 @@
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <script>
         // Initialize the map, centered on specific coordinates
         const map = L.map('map', {
@@ -191,6 +192,58 @@
         // Manage state for adding vs editing
         let currentEditId = null;
         let currentEditType = null; // 'node' or 'gateway'
+
+        // Connect to WebSocket
+        const socket = io();
+
+        // Object mapping type_code to a color
+        const typeColors = {
+            1: 'red',
+            2: 'blue',
+            3: 'orange',
+            // Default color if type_code is unknown
+            default: 'magenta' 
+        };
+
+        socket.on('new_detections', function(detections) {
+            console.log("Received new detections:", detections);
+            detections.forEach(det => {
+                const node = nodesData.find(n => n.dev_eui === det.dev_eui);
+                if (node) {
+                    // Calculate destination point
+                    // Note: Leaflet expects [lat, lng]. Azimuth is degrees clockwise from North.
+                    const radiusEarth = 6378137; // meters
+                    const distance = parseFloat(node.range);
+                    const brng = det.azimuth * Math.PI / 180;
+                    const lat1 = node.latitude * Math.PI / 180;
+                    const lon1 = node.longitude * Math.PI / 180;
+
+                    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / radiusEarth) +
+                                 Math.cos(lat1) * Math.sin(distance / radiusEarth) * Math.cos(brng));
+                    const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(distance / radiusEarth) * Math.cos(lat1),
+                                         Math.cos(distance / radiusEarth) - Math.sin(lat1) * Math.sin(lat2));
+
+                    const destLat = lat2 * 180 / Math.PI;
+                    const destLng = lon2 * 180 / Math.PI;
+
+                    const color = typeColors[det.type_code] || typeColors.default;
+
+                    const detectionLine = L.polyline([
+                        [node.latitude, node.longitude],
+                        [destLat, destLng]
+                    ], {
+                        color: color,
+                        weight: 4,
+                        opacity: 0.8
+                    }).addTo(map);
+
+                    // Fade out after 60 seconds
+                    setTimeout(() => {
+                        map.removeLayer(detectionLine);
+                    }, 60000);
+                }
+            });
+        });
 
         // Configure the map to render horizontally continuously
         //map.options.worldCopyJump = true;

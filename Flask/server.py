@@ -1,10 +1,12 @@
 from flask import Flask, request, jsonify, render_template
+from flask_socketio import SocketIO
 import psycopg2
 from psycopg2.extras import execute_values
 import os
 from database import connect_to_database, close_db_connection
 
 app = Flask(__name__)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 @app.route("/", methods=["GET"])
 def index():
@@ -241,6 +243,16 @@ def uplink():
         """
         execute_values(cursor, insert_query, insert_values)
         conn.commit()
+        
+        # Emit to connected clients via WebSocket
+        emitted_detections = []
+        for det in detections:
+            emitted_detections.append({
+                "dev_eui": dev_eui,
+                "type_code": det.get("type_code"),
+                "azimuth": det.get("azimuth")
+            })
+        socketio.emit('new_detections', emitted_detections)
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
@@ -401,4 +413,4 @@ def delete_gateway(gateway_id):
     return jsonify({"status": "ok"}), 200
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    socketio.run(app, host="0.0.0.0", port=5000)
