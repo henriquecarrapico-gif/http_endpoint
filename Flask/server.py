@@ -269,6 +269,39 @@ def uplink():
 
     return jsonify({"status": "ok", "inserted": len(insert_values)}), 200
 
+@app.route("/detections/recent", methods=["GET"])
+def get_recent_detections():
+    cursor, conn = None, None
+    try:
+        cursor, conn = connect_to_database()
+        if not conn or not cursor:
+            return jsonify({"status": "error", "message": "Database connection failed"}), 500
+
+        cursor.execute("""
+            SELECT dev_eui, type_code, azimuth, timestamp 
+            FROM detections 
+            WHERE timestamp >= NOW() - INTERVAL '60 seconds'
+        """)
+        rows = cursor.fetchall()
+        
+        recent = []
+        for row in rows:
+            recent.append({
+                "dev_eui": row[0],
+                "type_code": row[1],
+                "azimuth": row[2],
+                "timestamp": row[3].isoformat() if row[3] else None
+            })
+        return jsonify(recent), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        app.logger.error(f"Error fetching recent detections: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor and conn:
+            close_db_connection(cursor, conn)
+
 # ---------------------------------------------------------
 # Gateway Endpoints
 # ---------------------------------------------------------

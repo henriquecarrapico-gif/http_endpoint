@@ -205,44 +205,49 @@
             default: 'magenta'
         };
 
+        function drawDetection(det, ageMs = 0) {
+            const node = nodesData.find(n => n.dev_eui === det.dev_eui);
+            if (node) {
+                // Calculate destination point
+                // Note: Leaflet expects [lat, lng]. Azimuth is degrees clockwise from North.
+                const radiusEarth = 6378137; // meters
+                const distance = parseFloat(node.range) * 1.5;
+                const brng = det.azimuth * Math.PI / 180;
+                const lat1 = node.latitude * Math.PI / 180;
+                const lon1 = node.longitude * Math.PI / 180;
+
+                const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / radiusEarth) +
+                    Math.cos(lat1) * Math.sin(distance / radiusEarth) * Math.cos(brng));
+                const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(distance / radiusEarth) * Math.cos(lat1),
+                    Math.cos(distance / radiusEarth) - Math.sin(lat1) * Math.sin(lat2));
+
+                const destLat = lat2 * 180 / Math.PI;
+                const destLng = lon2 * 180 / Math.PI;
+
+                const color = typeColors[det.type_code] || typeColors.default;
+
+                const detectionLine = L.polyline([
+                    [node.latitude, node.longitude],
+                    [destLat, destLng]
+                ], {
+                    color: color,
+                    weight: 4,
+                    opacity: 0.8
+                }).addTo(map);
+
+                // Calculate remaining time out of 60 seconds (60000 ms)
+                const remainingTime = Math.max(0, 60000 - ageMs);
+
+                // Fade out
+                setTimeout(() => {
+                    map.removeLayer(detectionLine);
+                }, remainingTime);
+            }
+        }
+
         socket.on('new_detections', function (detections) {
             console.log("Received new detections:", detections);
-            detections.forEach(det => {
-                const node = nodesData.find(n => n.dev_eui === det.dev_eui);
-                if (node) {
-                    // Calculate destination point
-                    // Note: Leaflet expects [lat, lng]. Azimuth is degrees clockwise from North.
-                    const radiusEarth = 6378137; // meters
-                    const distance = parseFloat(node.range) * 1.5;
-                    const brng = det.azimuth * Math.PI / 180;
-                    const lat1 = node.latitude * Math.PI / 180;
-                    const lon1 = node.longitude * Math.PI / 180;
-
-                    const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / radiusEarth) +
-                        Math.cos(lat1) * Math.sin(distance / radiusEarth) * Math.cos(brng));
-                    const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(distance / radiusEarth) * Math.cos(lat1),
-                        Math.cos(distance / radiusEarth) - Math.sin(lat1) * Math.sin(lat2));
-
-                    const destLat = lat2 * 180 / Math.PI;
-                    const destLng = lon2 * 180 / Math.PI;
-
-                    const color = typeColors[det.type_code] || typeColors.default;
-
-                    const detectionLine = L.polyline([
-                        [node.latitude, node.longitude],
-                        [destLat, destLng]
-                    ], {
-                        color: color,
-                        weight: 4,
-                        opacity: 0.8
-                    }).addTo(map);
-
-                    // Fade out after 60 seconds
-                    setTimeout(() => {
-                        map.removeLayer(detectionLine);
-                    }, 60000);
-                }
-            });
+            detections.forEach(det => drawDetection(det, 0));
         });
 
         // Configure the map to render horizontally continuously
@@ -500,7 +505,34 @@
             if (fetchedNodes && fetchedGateways) {
                 renderSidebar();
                 drawConnections();
+                fetchRecentDetections();
             }
+        }
+
+        function fetchRecentDetections() {
+            fetch('/detections/recent')
+                .then(response => response.json())
+                .then(detections => {
+                    if (Array.isArray(detections)) {
+                        const now = new Date();
+                        detections.forEach(det => {
+                            if (det.timestamp) {
+                                // Parse the ISO timestamp. Note: make sure timezone matches.
+                                // The DB timestamp should be UTC.
+                                const detTime = new Date(det.timestamp);
+                                const ageMs = now - detTime;
+                                // Only draw if under 60 seconds old
+                                if (ageMs > 0 && ageMs < 60000) {
+                                    drawDetection(det, ageMs);
+                                } else if (ageMs <= 0) {
+                                    // If client clock is slightly behind server clock, treat as brand new
+                                    drawDetection(det, 0);
+                                }
+                            }
+                        });
+                    }
+                })
+                .catch(err => console.error("Error fetching recent detections:", err));
         }
 
         // Fetch existing gateways
