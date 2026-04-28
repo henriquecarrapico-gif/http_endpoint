@@ -95,7 +95,7 @@
             border-radius: 4px;
             font-size: 11px;
         }
-        
+
         button.action-btn {
             padding: 3px 6px;
         }
@@ -202,10 +202,10 @@
             2: 'blue',
             3: 'orange',
             // Default color if type_code is unknown
-            default: 'magenta' 
+            default: 'magenta'
         };
 
-        socket.on('new_detections', function(detections) {
+        socket.on('new_detections', function (detections) {
             console.log("Received new detections:", detections);
             detections.forEach(det => {
                 const node = nodesData.find(n => n.dev_eui === det.dev_eui);
@@ -213,15 +213,15 @@
                     // Calculate destination point
                     // Note: Leaflet expects [lat, lng]. Azimuth is degrees clockwise from North.
                     const radiusEarth = 6378137; // meters
-                    const distance = parseFloat(node.range);
+                    const distance = parseFloat(node.range) * 1.5;
                     const brng = det.azimuth * Math.PI / 180;
                     const lat1 = node.latitude * Math.PI / 180;
                     const lon1 = node.longitude * Math.PI / 180;
 
                     const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / radiusEarth) +
-                                 Math.cos(lat1) * Math.sin(distance / radiusEarth) * Math.cos(brng));
+                        Math.cos(lat1) * Math.sin(distance / radiusEarth) * Math.cos(brng));
                     const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(distance / radiusEarth) * Math.cos(lat1),
-                                         Math.cos(distance / radiusEarth) - Math.sin(lat1) * Math.sin(lat2));
+                        Math.cos(distance / radiusEarth) - Math.sin(lat1) * Math.sin(lat2));
 
                     const destLat = lat2 * 180 / Math.PI;
                     const destLng = lon2 * 180 / Math.PI;
@@ -437,55 +437,55 @@
             alert("Edit mode active. You can fill out the form, or click anywhere else on the map to move it.");
         };
 
-        window.deleteItem = function(type, id) {
+        window.deleteItem = function (type, id) {
             const item = type === 'node' ? nodesData.find(n => n.dev_eui === id) : gatewaysData.find(g => g.gateway_id === id);
-            if(!item) return;
+            if (!item) return;
 
             const displayName = item.name || (type === 'node' ? item.dev_eui : item.gateway_id);
             const confirmation = window.confirm(`Are you sure you want to delete ${type === 'node' ? 'Node' : 'Gateway'} "${displayName}"?`);
-            
+
             if (confirmation) {
                 const endpoint = type === 'node' ? `/nodes/${id}` : `/gateways/${id}`;
                 fetch(endpoint, {
                     method: 'DELETE'
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if(data.status === 'ok') {
-                        // Remove from local arrays
-                        if (type === 'node') {
-                            const idx = nodesData.findIndex(n => n.dev_eui === id);
-                            if(idx !== -1) nodesData.splice(idx, 1);
-                            // Remove from map visually
-                            if(nodeObjects[id]) {
-                                map.removeLayer(nodeObjects[id].marker);
-                                map.removeLayer(nodeObjects[id].circle);
-                                if(nodeObjects[id].tooltip) map.removeLayer(nodeObjects[id].tooltip);
-                                delete nodeObjects[id];
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'ok') {
+                            // Remove from local arrays
+                            if (type === 'node') {
+                                const idx = nodesData.findIndex(n => n.dev_eui === id);
+                                if (idx !== -1) nodesData.splice(idx, 1);
+                                // Remove from map visually
+                                if (nodeObjects[id]) {
+                                    map.removeLayer(nodeObjects[id].marker);
+                                    map.removeLayer(nodeObjects[id].circle);
+                                    if (nodeObjects[id].tooltip) map.removeLayer(nodeObjects[id].tooltip);
+                                    delete nodeObjects[id];
+                                }
+                            } else {
+                                const idx = gatewaysData.findIndex(n => n.gateway_id === id);
+                                if (idx !== -1) gatewaysData.splice(idx, 1);
+                                // Remove from map visually
+                                if (gatewayObjects[id]) {
+                                    map.removeLayer(gatewayObjects[id].marker);
+                                    map.removeLayer(gatewayObjects[id].circle);
+                                    if (gatewayObjects[id].tooltip) map.removeLayer(gatewayObjects[id].tooltip);
+                                    delete gatewayObjects[id];
+                                }
                             }
+
+                            // Re-render and re-fetch to fix lines
+                            renderSidebar();
+                            refreshConnections();
                         } else {
-                            const idx = gatewaysData.findIndex(n => n.gateway_id === id);
-                            if(idx !== -1) gatewaysData.splice(idx, 1);
-                            // Remove from map visually
-                            if(gatewayObjects[id]) {
-                                map.removeLayer(gatewayObjects[id].marker);
-                                map.removeLayer(gatewayObjects[id].circle);
-                                if(gatewayObjects[id].tooltip) map.removeLayer(gatewayObjects[id].tooltip);
-                                delete gatewayObjects[id];
-                            }
+                            alert(`Failed to delete ${type}: ` + data.message);
                         }
-                        
-                        // Re-render and re-fetch to fix lines
-                        renderSidebar();
-                        refreshConnections();
-                    } else {
-                        alert(`Failed to delete ${type}: ` + data.message);
-                    }
-                })
-                .catch(error => {
-                    console.error(`Error deleting ${type}:`, error);
-                    alert("An error occurred. Check the console.");
-                });
+                    })
+                    .catch(error => {
+                        console.error(`Error deleting ${type}:`, error);
+                        alert("An error occurred. Check the console.");
+                    });
             }
         };
 
