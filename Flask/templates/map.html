@@ -206,12 +206,14 @@
         };
 
         function drawDetection(det, ageMs = 0) {
+            if (det.azimuth === null || det.azimuth === undefined) return;
+            
             const node = nodesData.find(n => n.dev_eui === det.dev_eui);
             if (node) {
                 // Calculate destination point
                 // Note: Leaflet expects [lat, lng]. Azimuth is degrees clockwise from North.
                 const radiusEarth = 6378137; // meters
-                const distance = parseFloat(node.range) * 1.5;
+                const distance = parseFloat(node.range || 5000) * 1.5;
                 const brng = det.azimuth * Math.PI / 180;
                 const lat1 = node.latitude * Math.PI / 180;
                 const lon1 = node.longitude * Math.PI / 180;
@@ -514,19 +516,11 @@
                 .then(response => response.json())
                 .then(detections => {
                     if (Array.isArray(detections)) {
-                        const now = new Date();
                         detections.forEach(det => {
-                            if (det.timestamp) {
-                                // Parse the ISO timestamp. Note: make sure timezone matches.
-                                // The DB timestamp should be UTC.
-                                const detTime = new Date(det.timestamp);
-                                const ageMs = now - detTime;
+                            if (det.age_ms !== undefined) {
                                 // Only draw if under 60 seconds old
-                                if (ageMs > 0 && ageMs < 60000) {
-                                    drawDetection(det, ageMs);
-                                } else if (ageMs <= 0) {
-                                    // If client clock is slightly behind server clock, treat as brand new
-                                    drawDetection(det, 0);
+                                if (det.age_ms >= 0 && det.age_ms < 60000) {
+                                    drawDetection(det, det.age_ms);
                                 }
                             }
                         });

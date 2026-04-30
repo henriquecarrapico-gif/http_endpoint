@@ -225,9 +225,18 @@ def uplink():
     for det in detections:
         type_code = det.get("type_code")
         azimuth = det.get("azimuth")
+        
+        # Skip detections with missing azimuth to prevent database insert errors
+        if azimuth is None:
+            continue
+            
         node_timestamp = det.get("secs_since_midnight")
         
         insert_values.append((dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr))
+
+    if not insert_values:
+        app.logger.warning("No valid detections with azimuth found in uplink.")
+        return jsonify({"status": "ok", "message": "No valid detections to process"}), 200
 
     cursor, conn = None, None
     try:
@@ -247,6 +256,8 @@ def uplink():
         # Emit to connected clients via WebSocket
         emitted_detections = []
         for det in detections:
+            if det.get("azimuth") is None:
+                continue
             emitted_detections.append({
                 "dev_eui": dev_eui,
                 "type_code": det.get("type_code"),
@@ -278,7 +289,7 @@ def get_recent_detections():
             return jsonify({"status": "error", "message": "Database connection failed"}), 500
 
         cursor.execute("""
-            SELECT dev_eui, type_code, azimuth, timestamp 
+            SELECT dev_eui, type_code, azimuth, EXTRACT(EPOCH FROM (NOW() - timestamp)) * 1000 AS age_ms
             FROM detections 
             WHERE timestamp >= NOW() - INTERVAL '60 seconds'
         """)
@@ -290,7 +301,7 @@ def get_recent_detections():
                 "dev_eui": row[0],
                 "type_code": row[1],
                 "azimuth": row[2],
-                "timestamp": row[3].isoformat() if row[3] else None
+                "age_ms": int(row[3]) if row[3] is not None else 0
             })
         return jsonify(recent), 200
     except Exception as e:
