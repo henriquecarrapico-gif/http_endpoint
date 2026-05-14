@@ -3,4 +3,5 @@ psycopg2-binary
 gunicorn
 dotenv
 Flask-SocketIO
-eventlet
+gevent
+gevent-websocket
