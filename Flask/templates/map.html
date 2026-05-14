@@ -297,7 +297,7 @@
             const marker = L.marker([node.latitude, node.longitude], {
                 icon: nodeIcon,
                 draggable: true
-            }).addTo(map).bindPopup(`<b>Node Name:</b> ${node.name || 'Unnamed'}<br><b>Device EUI:</b> ${node.dev_eui}<br><b>Range:</b> ${node.range}m`);
+            }).addTo(map).bindPopup(`<b>Node Name:</b> ${node.name || 'Unnamed'}<br><b>Device EUI:</b> ${node.dev_eui}<br><b>Altitude:</b> ${node.altitude || 0}m<br><b>Range:</b> ${node.range}m`);
 
             let tooltip = null;
             if (node.name) {
@@ -368,7 +368,7 @@
             const marker = L.marker([gw.latitude, gw.longitude], {
                 icon: gwIcon,
                 draggable: true
-            }).addTo(map).bindPopup(`<b>Gateway Name:</b> ${gw.name || 'Unnamed'}<br><b>Gateway ID:</b> ${gw.gateway_id}<br><b>Range:</b> ${gw.range}m`);
+            }).addTo(map).bindPopup(`<b>Gateway Name:</b> ${gw.name || 'Unnamed'}<br><b>Gateway ID:</b> ${gw.gateway_id}<br><b>Altitude:</b> ${gw.altitude || 0}m<br><b>Range:</b> ${gw.range}m`);
 
             let tooltip = null;
             if (gw.name) {
