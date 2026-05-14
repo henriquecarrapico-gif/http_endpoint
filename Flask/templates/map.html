@@ -810,11 +810,9 @@
             const lng = e.latlng.lng;
 
             if (currentEditId !== null && currentEditType !== null) {
-                // We are moving an existing item
-                const item = currentEditType === 'node'
-                    ? nodesData.find(n => n.dev_eui === currentEditId)
-                    : gatewaysData.find(g => g.gateway_id === currentEditId);
-                openFormPopup(lat, lng, item, currentEditType);
+                // Just close the config window and reset edit state
+                currentEditId = null;
+                currentEditType = null;
             } else {
                 // Adding a brand new item
                 openFormPopup(lat, lng, null, null);
