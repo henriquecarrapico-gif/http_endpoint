@@ -8,6 +8,8 @@
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <!-- Leaflet Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
     <style>
         body,
         html {
@@ -149,6 +151,11 @@
                 <h3 style="margin: 0; font-size: 16px;">Registered Nodes</h3>
                 <span class="sidebar-close" onclick="toggleSidebar()">✕</span>
             </div>
+            <div style="padding: 10px 15px; border-bottom: 1px solid #ccc; background: #f4f4f4;">
+                <input type="text" id="searchInput" placeholder="Search nodes/gateways..."
+                    style="width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
+                    onkeyup="filterSidebar()">
+            </div>
             <div class="node-list" id="nodeList">
                 <!-- Nodes dynamically injected here by JS -->
             </div>
@@ -159,25 +166,40 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
+    <!-- Leaflet Geocoder JS -->
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
     <script>
         // Initialize the map, centered on specific coordinates
+        const worldBounds = [
+            [-90, -180],
+            [90, 180]
+        ];
+
         const map = L.map('map', {
-            maxBounds: [
-                [-90, -180],
-                [90, 180]
-            ],
+            maxBounds: worldBounds,
             maxBoundsViscosity: 1.0 // Prevents dragging completely outside the bounds
         }).setView([40.93380705586664, -8.366088867187502], 12);
+
+        // Calculate and set the minimum zoom required to fit the bounds
+        map.setMinZoom(map.getBoundsZoom(worldBounds));
+
+        // Update minZoom dynamically if window is resized
+        window.addEventListener('resize', function () {
+            map.setMinZoom(map.getBoundsZoom(worldBounds));
+        });
 
         // Add OpenStreetMap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             noWrap: true, // Stops the map tiles from repeating horizontally
-            bounds: [
-                [-90, -180],
-                [90, 180]
-            ],
+            bounds: worldBounds,
             attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        // Add Geocoder search control to map
+        L.Control.geocoder({
+            defaultMarkGeocode: true,
+            position: 'topleft'
         }).addTo(map);
 
         let popup = L.popup();
@@ -207,7 +229,7 @@
 
         function drawDetection(det, ageMs = 0) {
             if (det.azimuth === null || det.azimuth === undefined) return;
-            
+
             const node = nodesData.find(n => n.dev_eui === det.dev_eui);
             if (node) {
                 // Calculate destination point
@@ -430,6 +452,19 @@
             }
             drawConnections(); // Need to redraw connections to show/hide the lines too
             renderSidebar();
+        };
+
+        window.filterSidebar = function () {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const items = document.querySelectorAll('.node-item');
+            items.forEach(item => {
+                const text = item.innerText.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
         };
 
         window.editItem = function (type, id) {
@@ -683,7 +718,7 @@
                                     // Re-fetch nodes to sync connected_gateway values cleanly since DB calculates it automatically
                                     refreshConnections();
 
-                                    if (type === 'gateway' && !isEdit) drawGateway(payload);
+                                    if (type === 'gateway') drawGateway(payload);
 
                                     map.closePopup();
                                 } else {
