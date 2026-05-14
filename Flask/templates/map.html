@@ -545,8 +545,20 @@
 
             currentEditId = id;
             currentEditType = type;
+
+            // Fit the map to the device's range circle smoothly
+            const objs = type === 'node' ? nodeObjects[id] : gatewayObjects[id];
+            if (objs && objs.circle) {
+                map.flyToBounds(objs.circle.getBounds(), { padding: [50, 50], maxZoom: 16 });
+            } else {
+                map.flyTo([item.latitude, item.longitude], 15);
+            }
+
             // Open a popup to edit at its current location
-            openFormPopup(item.latitude, item.longitude, item, type);
+            // Delay the popup slightly so it opens during/after the fly animation starts
+            setTimeout(() => {
+                openFormPopup(item.latitude, item.longitude, item, type);
+            }, 300);
         };
 
         window.deleteItem = function (type, id) {
