@@ -287,17 +287,22 @@
                 }
             }
 
-            const marker = L.circleMarker([node.latitude, node.longitude], {
-                color: 'purple',
-                fillColor: 'purple',
-                fillOpacity: 1.0,
-                radius: 4
+            const nodeIcon = L.divIcon({
+                className: 'custom-node-icon',
+                html: '<div style="background-color:purple; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>',
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            const marker = L.marker([node.latitude, node.longitude], {
+                icon: nodeIcon,
+                draggable: true
             }).addTo(map).bindPopup(`<b>Node Name:</b> ${node.name || 'Unnamed'}<br><b>Device EUI:</b> ${node.dev_eui}<br><b>Range:</b> ${node.range}m`);
 
             let tooltip = null;
             if (node.name) {
                 tooltip = marker.bindTooltip(node.name, {
-                    permanent: true, direction: 'top', className: 'node-tooltip', offset: [0, -5]
+                    permanent: true, direction: 'top', className: 'node-tooltip', offset: [0, -10]
                 });
             }
 
@@ -307,6 +312,37 @@
                 fillOpacity: 0.3,
                 radius: parseFloat(node.range)
             }).addTo(map);
+
+            marker.on('drag', function (e) {
+                const latlng = e.target.getLatLng();
+                circle.setLatLng(latlng);
+                node.latitude = latlng.lat;
+                node.longitude = latlng.lng;
+                drawConnections();
+            });
+
+            marker.on('dragend', function (e) {
+                const latlng = e.target.getLatLng();
+                const payload = {
+                    name: node.name,
+                    latitude: latlng.lat,
+                    longitude: latlng.lng,
+                    altitude: node.altitude || 0,
+                    range: node.range
+                };
+                
+                fetch(`/nodes/${node.dev_eui}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(res => res.json()).then(data => {
+                    if (data.status === 'ok') {
+                        refreshConnections();
+                    } else {
+                        alert("Failed to move node: " + data.message);
+                    }
+                }).catch(err => console.error("Error moving node:", err));
+            });
 
             nodeObjects[node.dev_eui] = { marker, circle, tooltip, is_hidden: false };
             drawConnections(); // Redraw connections when a node is drawn/updated
@@ -322,17 +358,22 @@
                 }
             }
 
-            const marker = L.circleMarker([gw.latitude, gw.longitude], {
-                color: 'green',
-                fillColor: 'green',
-                fillOpacity: 1.0,
-                radius: 5
+            const gwIcon = L.divIcon({
+                className: 'custom-gw-icon',
+                html: '<div style="background-color:green; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>',
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const marker = L.marker([gw.latitude, gw.longitude], {
+                icon: gwIcon,
+                draggable: true
             }).addTo(map).bindPopup(`<b>Gateway Name:</b> ${gw.name || 'Unnamed'}<br><b>Gateway ID:</b> ${gw.gateway_id}<br><b>Range:</b> ${gw.range}m`);
 
             let tooltip = null;
             if (gw.name) {
                 tooltip = marker.bindTooltip(gw.name, {
-                    permanent: true, direction: 'top', className: 'node-tooltip', offset: [0, -5]
+                    permanent: true, direction: 'top', className: 'node-tooltip', offset: [0, -10]
                 });
             }
 
@@ -343,6 +384,37 @@
                 opacity: 1.0,    // opaque border
                 radius: parseFloat(gw.range)
             }).addTo(map);
+
+            marker.on('drag', function (e) {
+                const latlng = e.target.getLatLng();
+                circle.setLatLng(latlng);
+                gw.latitude = latlng.lat;
+                gw.longitude = latlng.lng;
+                drawConnections();
+            });
+
+            marker.on('dragend', function (e) {
+                const latlng = e.target.getLatLng();
+                const payload = {
+                    name: gw.name,
+                    latitude: latlng.lat,
+                    longitude: latlng.lng,
+                    altitude: gw.altitude || 0,
+                    range: gw.range
+                };
+                
+                fetch(`/gateways/${gw.gateway_id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(res => res.json()).then(data => {
+                    if (data.status === 'ok') {
+                        refreshConnections();
+                    } else {
+                        alert("Failed to move gateway: " + data.message);
+                    }
+                }).catch(err => console.error("Error moving gateway:", err));
+            });
 
             gatewayObjects[gw.gateway_id] = { marker, circle, tooltip, is_hidden: false };
             drawConnections(); // Redraw connections when a gateway is drawn/updated

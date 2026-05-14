@@ -83,7 +83,7 @@ def create_node():
     altitude = data.get("altitude", 0)
     node_range = data.get("range")
 
-    if not all([dev_eui, latitude, longitude, node_range]):
+    if dev_eui is None or latitude is None or longitude is None or node_range is None:
          return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
     cursor, conn = None, None
@@ -121,7 +121,7 @@ def update_node(dev_eui):
     altitude = data.get("altitude", 0)
     node_range = data.get("range")
 
-    if not all([latitude, longitude, node_range]):
+    if latitude is None or longitude is None or node_range is None:
          return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
     cursor, conn = None, None
@@ -358,7 +358,7 @@ def create_gateway():
     altitude = data.get("altitude", 0)
     gateway_range = data.get("range")
 
-    if not all([gateway_id, latitude, longitude, gateway_range]):
+    if gateway_id is None or latitude is None or longitude is None or gateway_range is None:
          return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
     cursor, conn = None, None
@@ -396,7 +396,7 @@ def update_gateway(gateway_id):
     altitude = data.get("altitude", 0)
     gateway_range = data.get("range")
 
-    if not all([latitude, longitude, gateway_range]):
+    if latitude is None or longitude is None or gateway_range is None:
          return jsonify({"status": "error", "message": "Missing required fields"}), 400
 
     cursor, conn = None, None
