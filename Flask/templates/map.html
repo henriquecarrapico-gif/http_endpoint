@@ -178,14 +178,14 @@
         const map = L.map('map', {
             maxBounds: worldBounds,
             maxBoundsViscosity: 1.0 // Prevents dragging completely outside the bounds
-        }).setView([40.93380705586664, -8.366088867187502], 12);
+        }).setView([41.4, -7.8], 8);
 
         // Calculate and set the minimum zoom required to fit the bounds
-        map.setMinZoom(map.getBoundsZoom(worldBounds));
+        map.setMinZoom(map.getBoundsZoom(worldBounds, true));
 
         // Update minZoom dynamically if window is resized
         window.addEventListener('resize', function () {
-            map.setMinZoom(map.getBoundsZoom(worldBounds));
+            map.setMinZoom(map.getBoundsZoom(worldBounds, true));
         });
 
         // Add OpenStreetMap tiles
