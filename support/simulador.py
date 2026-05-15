@@ -7,7 +7,7 @@ URL = "http://divsgateway0.local/uplink?event=up"
 dev_eui = "0409221920260001"
 
 azimuth = 0  # starting angle
-
+typecode = 0
 while True:
     payload = {
         "deviceInfo": {"devEui": dev_eui},
@@ -15,13 +15,14 @@ while True:
         "object": {
             "detections": [
             {
-                "type_code": 33,
+                "type_code": typecode,
                 "azimuth": azimuth,  # dynamic azimuth
                 "secs_since_midnight": int(time.time() % 86400)
             }
         ]
     },
     "rxInfo": [{"rssi": -90, "snr": 5.5}]
+
 }
 
     try:
@@ -31,6 +32,6 @@ while True:
         print("Error:", e)
 
     # Increase azimuth
-    azimuth = (azimuth + 1) % 360  # wraps at 360
-
+    azimuth = (azimuth + 30) % 360  # wraps at 360
+    typecode = (typecode + 8) % 63  # cycle through type codes 0-4
     time.sleep(1)  # send every 3 second
