@@ -219,6 +219,37 @@ def uplink():
     if rx_info:
         rssi = rx_info[0].get("rssi")
         snr  = rx_info[0].get("snr")
+        
+        # Check if gateway location is provided by ChirpStack
+        gateway_id = rx_info[0].get("gatewayId")
+        location = rx_info[0].get("location")
+        
+        if gateway_id and location and location.get("latitude") and location.get("longitude"):
+            # Attempt to update the gateway's location in the database
+            lat = location.get("latitude")
+            lon = location.get("longitude")
+            alt = location.get("altitude", 0)
+            
+            try:
+                cursor, conn = connect_to_database()
+                if cursor and conn:
+                    # Update gateway location if it exists
+                    cursor.execute(
+                        """
+                        UPDATE gateways 
+                        SET latitude=%s, longitude=%s, altitude=%s
+                        WHERE gateway_id=%s
+                        """,
+                        (lat, lon, alt, gateway_id)
+                    )
+                    
+                    if cursor.rowcount > 0:
+                        update_node_connections(cursor)
+                        conn.commit()
+                        app.logger.info(f"Auto-relocated gateway {gateway_id} to {lat}, {lon}")
+                    close_db_connection(cursor, conn)
+            except Exception as e:
+                app.logger.error(f"Failed to auto-update gateway location: {e}")
 
     # Prepare batch data
     insert_values = []

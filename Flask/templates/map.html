@@ -218,14 +218,15 @@
         // Connect to WebSocket
         const socket = io();
 
-        // Object mapping type_code to a color
-        const typeColors = {
-            1: 'red',
-            2: 'blue',
-            3: 'orange',
-            // Default color if type_code is unknown
-            default: 'magenta'
-        };
+        // Function to calculate color from green (0) to red (63)
+        function getDetectionColor(type_code) {
+            // Clamp value between 0 and 63
+            const code = Math.max(0, Math.min(63, type_code || 0));
+            const ratio = code / 63;
+            const r = Math.round(ratio * 255);
+            const g = Math.round((1 - ratio) * 255);
+            return `rgb(${r}, ${g}, 0)`;
+        }
 
         function drawDetection(det, ageMs = 0) {
             if (det.azimuth === null || det.azimuth === undefined) return;
@@ -248,7 +249,7 @@
                 const destLat = lat2 * 180 / Math.PI;
                 const destLng = lon2 * 180 / Math.PI;
 
-                const color = typeColors[det.type_code] || typeColors.default;
+                const color = getDetectionColor(det.type_code);
 
                 const detectionLine = L.polyline([
                     [node.latitude, node.longitude],
