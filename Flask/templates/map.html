@@ -228,13 +228,212 @@
             return `rgb(${r}, ${g}, 0)`;
         }
 
+        // Triangulation state
+        const activeDetections = [];
+        const activeTriangulations = new Set();
+        const AZIMUTH_UNCERTAINTY = 5.0; // ±5 degrees as requested
+
+        // Local flat-earth Mercator coordinate conversion helpers
+        function latLngToLocalCartesian(lat, lon, lat_org, lon_org) {
+            const R = 6378137.0; // Earth radius in meters
+            const latRad = lat * Math.PI / 180;
+            const latOrgRad = lat_org * Math.PI / 180;
+            const lonRad = lon * Math.PI / 180;
+            const lonOrgRad = lon_org * Math.PI / 180;
+
+            const y = (latRad - latOrgRad) * R;
+            const x = (lonRad - lonOrgRad) * R * Math.cos(latOrgRad);
+            return { x, y };
+        }
+
+        function localCartesianToLatLng(x, y, lat_org, lon_org) {
+            const R = 6378137.0;
+            const latOrgRad = lat_org * Math.PI / 180;
+            const latRad = latOrgRad + (y / R);
+            const lonRad = (lon_org * Math.PI / 180) + (x / (R * Math.cos(latOrgRad)));
+            return [latRad * 180 / Math.PI, lonRad * 180 / Math.PI];
+        }
+
+        // Ray Intersection Math using 2D Perp-Dot Products
+        // Returns { x, y } in local meters, or null if parallel / invalid
+        function getRayIntersection(x1, y1, az1, x2, y2, az2, range1, range2) {
+            const rad1 = az1 * Math.PI / 180;
+            const rad2 = az2 * Math.PI / 180;
+
+            // Direction vectors (x: East, y: North)
+            const ux = Math.sin(rad1);
+            const uy = Math.cos(rad1);
+            const vx = Math.sin(rad2);
+            const vy = Math.cos(rad2);
+
+            // Determinant
+            const det = ux * vy - uy * vx;
+            if (Math.abs(det) < 1e-6) {
+                return null; // parallel or anti-parallel rays
+            }
+
+            // Ray parameter distance coefficients
+            const t1 = ((x2 - x1) * vy - (y2 - y1) * vx) / det;
+            const t2 = ((x2 - x1) * uy - (y2 - y1) * ux) / det;
+
+            // Limit intersections to forward rays and within maximum range envelope
+            const maxRange1 = (parseFloat(range1) || 5000) * 1.5;
+            const maxRange2 = (parseFloat(range2) || 5000) * 1.5;
+
+            if (t1 >= 0 && t2 >= 0 && t1 <= maxRange1 && t2 <= maxRange2) {
+                return {
+                    x: x1 + t1 * ux,
+                    y: y1 + t1 * uy,
+                    t1: t1,
+                    t2: t2
+                };
+            }
+            return null;
+        }
+
+        // Checks recently active detections to see if any can be triangulated with the new one
+        function checkTriangulation(newDet) {
+            const nodeA = nodesData.find(n => n.dev_eui === newDet.dev_eui);
+            if (!nodeA) return;
+
+            activeDetections.forEach(oldDet => {
+                // Triangulate only if they belong to different towers and occur within a 3-second window
+                if (oldDet.dev_eui === newDet.dev_eui) return;
+                if (Math.abs(oldDet.timestamp - newDet.timestamp) > 3000) return;
+
+                const nodeB = nodesData.find(n => n.dev_eui === oldDet.dev_eui);
+                if (!nodeB) return;
+
+                // Create a unique key for the triangulation pair to prevent duplicate overlays
+                const pairKey = [newDet.dev_eui, newDet.timestamp, oldDet.dev_eui, oldDet.timestamp].sort().join('_');
+                if (activeTriangulations.has(pairKey)) return;
+
+                // local projection origin is average position
+                const lat_org = (nodeA.latitude + nodeB.latitude) / 2.0;
+                const lon_org = (nodeA.longitude + nodeB.longitude) / 2.0;
+
+                const posA = latLngToLocalCartesian(nodeA.latitude, nodeA.longitude, lat_org, lon_org);
+                const posB = latLngToLocalCartesian(nodeB.latitude, nodeB.longitude, lat_org, lon_org);
+
+                const azA = newDet.azimuth;
+                const azB = oldDet.azimuth;
+
+                // 1. Calculate primary intersection
+                const centralInt = getRayIntersection(posA.x, posA.y, azA, posB.x, posB.y, azB, nodeA.range, nodeB.range);
+                if (!centralInt) return; // central bearings do not cross in the forward sector within range
+
+                // 2. Calculate the four corner boundary intersections for the ±5 degree error sector
+                const azA_min = (azA - AZIMUTH_UNCERTAINTY + 360) % 360;
+                const azA_max = (azA + AZIMUTH_UNCERTAINTY) % 360;
+                const azB_min = (azB - AZIMUTH_UNCERTAINTY + 360) % 360;
+                const azB_max = (azB + AZIMUTH_UNCERTAINTY) % 360;
+
+                const P11 = getRayIntersection(posA.x, posA.y, azA_min, posB.x, posB.y, azB_min, nodeA.range, nodeB.range);
+                const P12 = getRayIntersection(posA.x, posA.y, azA_min, posB.x, posB.y, azB_max, nodeA.range, nodeB.range);
+                const P22 = getRayIntersection(posA.x, posA.y, azA_max, posB.x, posB.y, azB_max, nodeA.range, nodeB.range);
+                const P21 = getRayIntersection(posA.x, posA.y, azA_max, posB.x, posB.y, azB_min, nodeA.range, nodeB.range);
+
+                let polyCoords = [];
+                let shapeType = "quadrilateral";
+                
+                if (P11 && P12 && P22 && P21) {
+                    // Draw exact convex quadrilateral region
+                    polyCoords = [
+                        localCartesianToLatLng(P11.x, P11.y, lat_org, lon_org),
+                        localCartesianToLatLng(P12.x, P12.y, lat_org, lon_org),
+                        localCartesianToLatLng(P22.x, P22.y, lat_org, lon_org),
+                        localCartesianToLatLng(P21.x, P21.y, lat_org, lon_org)
+                    ];
+                } else {
+                    // Fallback to local 15m diamond centered on central ray intersection point
+                    shapeType = "fallback-diamond";
+                    const size = 15.0; // meters
+                    polyCoords = [
+                        localCartesianToLatLng(centralInt.x - size, centralInt.y, lat_org, lon_org),
+                        localCartesianToLatLng(centralInt.x, centralInt.y + size, lat_org, lon_org),
+                        localCartesianToLatLng(centralInt.x + size, centralInt.y, lat_org, lon_org),
+                        localCartesianToLatLng(centralInt.x, centralInt.y - size, lat_org, lon_org)
+                    ];
+                }
+
+                // Add to active set to avoid duplicate drawing
+                activeTriangulations.add(pairKey);
+
+                // Render shaded uncertainty polygon
+                const uncertaintyPoly = L.polygon(polyCoords, {
+                    color: '#e64a19',     // premium amber-orange border
+                    fillColor: '#ff5722', // translucent orange fill
+                    fillOpacity: 0.25,
+                    weight: 2,
+                    dashArray: '4, 4',
+                    className: 'triangulation-polygon'
+                }).addTo(map);
+
+                // Bind a descriptive informative popup
+                const timeDiff = Math.abs(newDet.timestamp - oldDet.timestamp) / 1000.0;
+                const centerLatLng = localCartesianToLatLng(centralInt.x, centralInt.y, lat_org, lon_org);
+                
+                uncertaintyPoly.bindPopup(`
+                    <div style="font-family: Arial, sans-serif; min-width: 220px; font-size: 13px;">
+                        <h4 style="margin: 0 0 8px 0; color: #d84315; border-bottom: 2px solid #ffab91; padding-bottom: 4px; font-size: 14px;">🎯 Sound Source Triangulated</h4>
+                        <b>Participating Towers:</b><br/>
+                        <span style="color: purple;">●</span> ${nodeA.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azA).toFixed(1)}°)<br/>
+                        <span style="color: purple;">●</span> ${nodeB.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azB).toFixed(1)}°)<br/>
+                        <div style="margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; font-size: 11px; color: #555;">
+                            <b>Coincidence Offset:</b> ${timeDiff.toFixed(2)} seconds<br/>
+                            <b>Estimated Origin:</b> ${centerLatLng[0].toFixed(6)}, ${centerLatLng[1].toFixed(6)}<br/>
+                            <b>Geometry Mode:</b> ${shapeType}
+                        </div>
+                    </div>
+                `);
+
+                // Fade out the polygon over the remaining lifetime of the youngest detection in the pair
+                const ageLimit = 60000;
+                const elapsedNew = Date.now() - newDet.timestamp;
+                const elapsedOld = Date.now() - oldDet.timestamp;
+                const remainingTime = Math.max(0, ageLimit - Math.max(elapsedNew, elapsedOld));
+
+                setTimeout(() => {
+                    let opacity = 0.25;
+                    const fadeInterval = setInterval(() => {
+                        opacity -= 0.02;
+                        if (opacity <= 0) {
+                            clearInterval(fadeInterval);
+                            map.removeLayer(uncertaintyPoly);
+                            activeTriangulations.delete(pairKey);
+                        } else {
+                            uncertaintyPoly.setStyle({ fillOpacity: opacity, opacity: opacity * 4.0 });
+                        }
+                    }, 40);
+                }, remainingTime);
+            });
+        }
+
         function drawDetection(det, ageMs = 0) {
             if (det.azimuth === null || det.azimuth === undefined) return;
 
             const node = nodesData.find(n => n.dev_eui === det.dev_eui);
             if (node) {
-                // Calculate destination point
-                // Note: Leaflet expects [lat, lng]. Azimuth is degrees clockwise from North.
+                // 1. Record detection in active array
+                const now = Date.now();
+                const detectionRecord = {
+                    dev_eui: det.dev_eui,
+                    azimuth: parseFloat(det.azimuth),
+                    type_code: det.type_code,
+                    timestamp: now - ageMs
+                };
+                activeDetections.push(detectionRecord);
+
+                // Auto-cleanup detection record after 60 seconds
+                const remainingTime = Math.max(0, 60000 - ageMs);
+                setTimeout(() => {
+                    const idx = activeDetections.indexOf(detectionRecord);
+                    if (idx !== -1) {
+                        activeDetections.splice(idx, 1);
+                    }
+                }, remainingTime);
+
+                // Calculate bearing destination point
                 const radiusEarth = 6378137; // meters
                 const distance = parseFloat(node.range || 5000) * 1.5;
                 const brng = det.azimuth * Math.PI / 180;
@@ -260,13 +459,13 @@
                     opacity: 0.8
                 }).addTo(map);
 
-                // Calculate remaining time out of 60 seconds (60000 ms)
-                const remainingTime = Math.max(0, 60000 - ageMs);
-
-                // Fade out
+                // Fade out the bearing line
                 setTimeout(() => {
                     map.removeLayer(detectionLine);
                 }, remainingTime);
+
+                // 2. Scan for and trigger cross-triangulations
+                checkTriangulation(detectionRecord);
             }
         }
 
