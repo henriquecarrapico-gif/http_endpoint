@@ -104,7 +104,7 @@ while True:
         dx = 100.0
         dy = 0.0
         
-    A = D / 2.0  # Maximum distance to either tower from midpoint
+    A = D * 0.75  # Amplitude set to 75% of distance to allow target to sweep behind both towers (which are at 50%)
     
     # Unit direction vectors along and perpendicular to the tower alignment line
     ex = dx / D
