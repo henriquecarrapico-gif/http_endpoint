@@ -8,6 +8,37 @@ from database import connect_to_database, close_db_connection
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
+import csv
+
+# Global mapping for sound classes parsed from support/class_groups.csv
+sound_classes = {}
+try:
+    server_dir = os.path.dirname(os.path.abspath(__file__))
+    class_groups_path = os.path.normpath(os.path.join(server_dir, "..", "support", "class_groups.csv"))
+    if os.path.exists(class_groups_path):
+        with open(class_groups_path, mode='r', encoding='utf-8') as f:
+            reader = csv.reader(f)
+            next(reader) # skip header
+            for row in reader:
+                if len(row) >= 4:
+                    try:
+                        y_idx = int(row[0])
+                        g_idx = int(row[1])
+                        g_name = row[2]
+                        d_name = row[3]
+                        sound_classes[y_idx] = {
+                            "group_index": g_idx,
+                            "group_name": g_name,
+                            "display_name": d_name
+                        }
+                    except ValueError:
+                        continue
+        app.logger.info(f"Loaded {len(sound_classes)} sound classes from CSV")
+    else:
+        app.logger.warning(f"Sound classes file not found at: {class_groups_path}")
+except Exception as e:
+    app.logger.error(f"Error loading sound classes from CSV: {e}")
+
 @app.route("/", methods=["GET"])
 def index():
     endpoints = {}
@@ -293,7 +324,10 @@ def uplink():
                 "dev_eui": dev_eui,
                 "type_code": det.get("type_code"),
                 "azimuth": det.get("azimuth"),
-                "secs_since_midnight": det.get("secs_since_midnight")
+                "secs_since_midnight": det.get("secs_since_midnight"),
+                "timestamp": timestamp,
+                "rssi": rssi,
+                "snr": snr
             })
         socketio.emit('new_detections', emitted_detections)
     except psycopg2.Error as e:
@@ -341,6 +375,47 @@ def get_recent_detections():
         if conn:
             conn.rollback()
         app.logger.error(f"Error fetching recent detections: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+    finally:
+        if cursor and conn:
+            close_db_connection(cursor, conn)
+
+@app.route("/api/sound_classes", methods=["GET"])
+def get_sound_classes():
+    return jsonify(sound_classes), 200
+
+@app.route("/detections/history", methods=["GET"])
+def get_historical_detections():
+    cursor, conn = None, None
+    try:
+        cursor, conn = connect_to_database()
+        if not conn or not cursor:
+            return jsonify({"status": "error", "message": "Database connection failed"}), 500
+
+        cursor.execute("""
+            SELECT dev_eui, type_code, azimuth, timestamp, node_timestamp, rssi, snr
+            FROM detections 
+            WHERE timestamp >= NOW() - INTERVAL '7 days'
+            ORDER BY timestamp DESC
+        """)
+        rows = cursor.fetchall()
+        
+        history = []
+        for row in rows:
+            history.append({
+                "dev_eui": row[0],
+                "type_code": row[1],
+                "azimuth": row[2],
+                "timestamp": row[3].isoformat() if row[3] is not None else None,
+                "secs_since_midnight": row[4],
+                "rssi": row[5],
+                "snr": row[6]
+            })
+        return jsonify(history), 200
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        app.logger.error(f"Error fetching historical detections: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:

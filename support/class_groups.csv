@@ -1,0 +1,522 @@
+yamnet_index,group_index,group_name,yamnet_display_name
+0,1,Human,Speech
+1,1,Human,"Child speech, kid speaking"
+2,1,Human,Conversation
+3,1,Human,"Narration, monologue"
+4,1,Human,Babbling
+5,1,Human,Speech synthesizer
+6,1,Human,Shout
+7,1,Human,Bellow
+8,1,Human,Whoop
+9,1,Human,Yell
+10,1,Human,Children shouting
+11,1,Human,Screaming
+12,1,Human,Whispering
+13,1,Human,Laughter
+14,1,Human,Baby laughter
+15,1,Human,Giggle
+16,1,Human,Snicker
+17,1,Human,Belly laugh
+18,1,Human,"Chuckle, chortle"
+19,1,Human,"Crying, sobbing"
+20,1,Human,"Baby cry, infant cry"
+21,1,Human,Whimper
+22,1,Human,"Wail, moan"
+23,1,Human,Sigh
+24,1,Human,Singing
+25,1,Human,Choir
+26,1,Human,Yodeling
+27,1,Human,Chant
+28,1,Human,Mantra
+29,1,Human,Child singing
+30,1,Human,Synthetic singing
+31,1,Human,Rapping
+32,1,Human,Humming
+33,1,Human,Groan
+34,1,Human,Grunt
+35,1,Human,Whistling
+36,1,Human,Breathing
+37,1,Human,Wheeze
+38,1,Human,Snoring
+39,1,Human,Gasp
+40,1,Human,Pant
+41,1,Human,Snort
+42,1,Human,Cough
+43,1,Human,Throat clearing
+44,1,Human,Sneeze
+45,1,Human,Sniff
+46,1,Human,Run
+47,1,Human,Shuffle
+48,1,Human,"Walk, footsteps"
+49,1,Human,"Chewing, mastication"
+50,1,Human,Biting
+51,1,Human,Gargling
+52,1,Human,Stomach rumble
+53,1,Human,"Burping, eructation"
+54,1,Human,Hiccup
+55,1,Human,Fart
+56,1,Human,Hands
+57,1,Human,Finger snapping
+58,1,Human,Clapping
+59,1,Human,"Heart sounds, heartbeat"
+60,1,Human,Heart murmur
+61,1,Human,Cheering
+62,1,Human,Applause
+63,1,Human,Chatter
+64,1,Human,Crowd
+65,1,Human,"Hubbub, speech noise, speech babble"
+66,1,Human,Children playing
+67,4,Wild_Animal,Animal
+68,4,Wild_Animal,"Domestic animals, pets"
+69,2,Domestic_Pet,Dog
+70,2,Domestic_Pet,Bark
+71,2,Domestic_Pet,Yip
+72,2,Domestic_Pet,Howl
+73,2,Domestic_Pet,Bow-wow
+74,2,Domestic_Pet,Growling
+75,2,Domestic_Pet,Whimper (dog)
+76,2,Domestic_Pet,Cat
+77,2,Domestic_Pet,Purr
+78,2,Domestic_Pet,Meow
+79,2,Domestic_Pet,Hiss
+80,2,Domestic_Pet,Caterwaul
+81,3,Livestock,"Livestock, farm animals, working animals"
+82,3,Livestock,Horse
+83,3,Livestock,Clip-clop
+84,3,Livestock,"Neigh, whinny"
+85,3,Livestock,"Cattle, bovinae"
+86,3,Livestock,Moo
+87,3,Livestock,Cowbell
+88,3,Livestock,Pig
+89,3,Livestock,Oink
+90,3,Livestock,Goat
+91,3,Livestock,Bleat
+92,3,Livestock,Sheep
+93,3,Livestock,Fowl
+94,3,Livestock,"Chicken, rooster"
+95,3,Livestock,Cluck
+96,3,Livestock,"Crowing, cock-a-doodle-doo"
+97,3,Livestock,Turkey
+98,3,Livestock,Gobble
+99,3,Livestock,Duck
+100,3,Livestock,Quack
+101,3,Livestock,Goose
+102,3,Livestock,Honk
+103,4,Wild_Animal,Wild animals
+104,4,Wild_Animal,"Roaring cats (lions, tigers)"
+105,4,Wild_Animal,Roar
+106,5,Bird,Bird
+107,5,Bird,"Bird vocalization, bird call, bird song"
+108,5,Bird,"Chirp, tweet"
+109,5,Bird,Squawk
+110,5,Bird,"Pigeon, dove"
+111,5,Bird,Coo
+112,5,Bird,Crow
+113,5,Bird,Caw
+114,5,Bird,Owl
+115,5,Bird,Hoot
+116,5,Bird,"Bird flight, flapping wings"
+117,4,Wild_Animal,"Canidae, dogs, wolves"
+118,4,Wild_Animal,"Rodents, rats, mice"
+119,4,Wild_Animal,Mouse
+120,4,Wild_Animal,Patter
+121,6,Insect,Insect
+122,6,Insect,Cricket
+123,6,Insect,Mosquito
+124,6,Insect,"Fly, housefly"
+125,6,Insect,Buzz
+126,6,Insect,"Bee, wasp, etc."
+127,7,Frog_Reptile,Frog
+128,7,Frog_Reptile,Croak
+129,7,Frog_Reptile,Snake
+130,7,Frog_Reptile,Rattle
+131,7,Frog_Reptile,Whale vocalization
+132,8,Music,Music
+133,8,Music,Musical instrument
+134,8,Music,Plucked string instrument
+135,8,Music,Guitar
+136,8,Music,Electric guitar
+137,8,Music,Bass guitar
+138,8,Music,Acoustic guitar
+139,8,Music,"Steel guitar, slide guitar"
+140,8,Music,Tapping (guitar technique)
+141,8,Music,Strum
+142,8,Music,Banjo
+143,8,Music,Sitar
+144,8,Music,Mandolin
+145,8,Music,Zither
+146,8,Music,Ukulele
+147,8,Music,Keyboard (musical)
+148,8,Music,Piano
+149,8,Music,Electric piano
+150,8,Music,Organ
+151,8,Music,Electronic organ
+152,8,Music,Hammond organ
+153,8,Music,Synthesizer
+154,8,Music,Sampler
+155,8,Music,Harpsichord
+156,8,Music,Percussion
+157,8,Music,Drum kit
+158,8,Music,Drum machine
+159,8,Music,Drum
+160,8,Music,Snare drum
+161,8,Music,Rimshot
+162,8,Music,Drum roll
+163,8,Music,Bass drum
+164,8,Music,Timpani
+165,8,Music,Tabla
+166,8,Music,Cymbal
+167,8,Music,Hi-hat
+168,8,Music,Wood block
+169,8,Music,Tambourine
+170,8,Music,Rattle (instrument)
+171,8,Music,Maraca
+172,8,Music,Gong
+173,8,Music,Tubular bells
+174,8,Music,Mallet percussion
+175,8,Music,"Marimba, xylophone"
+176,8,Music,Glockenspiel
+177,8,Music,Vibraphone
+178,8,Music,Steelpan
+179,8,Music,Orchestra
+180,8,Music,Brass instrument
+181,8,Music,French horn
+182,8,Music,Trumpet
+183,8,Music,Trombone
+184,8,Music,Bowed string instrument
+185,8,Music,String section
+186,8,Music,"Violin, fiddle"
+187,8,Music,Pizzicato
+188,8,Music,Cello
+189,8,Music,Double bass
+190,8,Music,"Wind instrument, woodwind instrument"
+191,8,Music,Flute
+192,8,Music,Saxophone
+193,8,Music,Clarinet
+194,8,Music,Harp
+195,8,Music,Bell
+196,8,Music,Church bell
+197,8,Music,Jingle bell
+198,8,Music,Bicycle bell
+199,8,Music,Tuning fork
+200,8,Music,Chime
+201,8,Music,Wind chime
+202,8,Music,Change ringing (campanology)
+203,8,Music,Harmonica
+204,8,Music,Accordion
+205,8,Music,Bagpipes
+206,8,Music,Didgeridoo
+207,8,Music,Shofar
+208,8,Music,Theremin
+209,8,Music,Singing bowl
+210,8,Music,Scratching (performance technique)
+211,8,Music,Pop music
+212,8,Music,Hip hop music
+213,8,Music,Beatboxing
+214,8,Music,Rock music
+215,8,Music,Heavy metal
+216,8,Music,Punk rock
+217,8,Music,Grunge
+218,8,Music,Progressive rock
+219,8,Music,Rock and roll
+220,8,Music,Psychedelic rock
+221,8,Music,Rhythm and blues
+222,8,Music,Soul music
+223,8,Music,Reggae
+224,8,Music,Country
+225,8,Music,Swing music
+226,8,Music,Bluegrass
+227,8,Music,Funk
+228,8,Music,Folk music
+229,8,Music,Middle Eastern music
+230,8,Music,Jazz
+231,8,Music,Disco
+232,8,Music,Classical music
+233,8,Music,Opera
+234,8,Music,Electronic music
+235,8,Music,House music
+236,8,Music,Techno
+237,8,Music,Dubstep
+238,8,Music,Drum and bass
+239,8,Music,Electronica
+240,8,Music,Electronic dance music
+241,8,Music,Ambient music
+242,8,Music,Trance music
+243,8,Music,Music of Latin America
+244,8,Music,Salsa music
+245,8,Music,Flamenco
+246,8,Music,Blues
+247,8,Music,Music for children
+248,8,Music,New-age music
+249,8,Music,Vocal music
+250,8,Music,A capella
+251,8,Music,Music of Africa
+252,8,Music,Afrobeat
+253,8,Music,Christian music
+254,8,Music,Gospel music
+255,8,Music,Music of Asia
+256,8,Music,Carnatic music
+257,8,Music,Music of Bollywood
+258,8,Music,Ska
+259,8,Music,Traditional music
+260,8,Music,Independent music
+261,8,Music,Song
+262,8,Music,Background music
+263,8,Music,Theme music
+264,8,Music,Jingle (music)
+265,8,Music,Soundtrack music
+266,8,Music,Lullaby
+267,8,Music,Video game music
+268,8,Music,Christmas music
+269,8,Music,Dance music
+270,8,Music,Wedding music
+271,8,Music,Happy music
+272,8,Music,Sad music
+273,8,Music,Tender music
+274,8,Music,Exciting music
+275,8,Music,Angry music
+276,8,Music,Scary music
+277,9,Wind_Storm,Wind
+278,9,Wind_Storm,Rustling leaves
+279,9,Wind_Storm,Wind noise (microphone)
+280,9,Wind_Storm,Thunderstorm
+281,9,Wind_Storm,Thunder
+282,10,Rain,Water
+283,10,Rain,Rain
+284,10,Rain,Raindrop
+285,10,Rain,Rain on surface
+286,11,Water,Stream
+287,11,Water,Waterfall
+288,11,Water,Ocean
+289,11,Water,"Waves, surf"
+290,11,Water,Steam
+291,11,Water,Gurgling
+292,12,Fire,Fire
+293,12,Fire,Crackle
+294,13,Watercraft,Vehicle
+295,13,Watercraft,"Boat, Water vehicle"
+296,13,Watercraft,"Sailboat, sailing ship"
+297,13,Watercraft,"Rowboat, canoe, kayak"
+298,13,Watercraft,"Motorboat, speedboat"
+299,13,Watercraft,Ship
+300,14,Car,Motor vehicle (road)
+301,14,Car,Car
+302,14,Car,"Vehicle horn, car horn, honking"
+303,14,Car,Toot
+304,14,Car,Car alarm
+305,14,Car,"Power windows, electric windows"
+306,14,Car,Skidding
+307,14,Car,Tire squeal
+308,14,Car,Car passing by
+309,14,Car,"Race car, auto racing"
+310,15,Truck,Truck
+311,15,Truck,Air brake
+312,15,Truck,"Air horn, truck horn"
+313,15,Truck,Reversing beeps
+314,15,Truck,"Ice cream truck, ice cream van"
+315,15,Truck,Bus
+316,16,Emergency_Vehicle,Emergency vehicle
+317,16,Emergency_Vehicle,Police car (siren)
+318,16,Emergency_Vehicle,Ambulance (siren)
+319,16,Emergency_Vehicle,"Fire engine, fire truck (siren)"
+320,17,Small_Motor,Motorcycle
+321,14,Car,"Traffic noise, roadway noise"
+322,18,Train,Rail transport
+323,18,Train,Train
+324,18,Train,Train whistle
+325,18,Train,Train horn
+326,18,Train,"Railroad car, train wagon"
+327,18,Train,Train wheels squealing
+328,18,Train,"Subway, metro, underground"
+329,20,Aircraft,Aircraft
+330,20,Aircraft,Aircraft engine
+331,21,Jet_Engine,Jet engine
+332,22,Propeller,"Propeller, airscrew"
+333,19,Helicopter,Helicopter
+334,20,Aircraft,"Fixed-wing aircraft, airplane"
+335,17,Small_Motor,Bicycle
+336,17,Small_Motor,Skateboard
+337,23,Engine,Engine
+338,23,Engine,Light engine (high frequency)
+339,17,Small_Motor,"Dental drill, dentist's drill"
+340,17,Small_Motor,Lawn mower
+341,17,Small_Motor,Chainsaw
+342,23,Engine,Medium engine (mid frequency)
+343,23,Engine,Heavy engine (low frequency)
+344,23,Engine,Engine knocking
+345,23,Engine,Engine starting
+346,23,Engine,Idling
+347,23,Engine,"Accelerating, revving, vroom"
+348,24,Door,Door
+349,24,Door,Doorbell
+350,24,Door,Ding-dong
+351,24,Door,Sliding door
+352,24,Door,Slam
+353,24,Door,Knock
+354,24,Door,Tap
+355,24,Door,Squeak
+356,24,Door,Cupboard open or close
+357,24,Door,Drawer open or close
+358,25,Domestic_Indoor,"Dishes, pots, and pans"
+359,25,Domestic_Indoor,"Cutlery, silverware"
+360,25,Domestic_Indoor,Chopping (food)
+361,25,Domestic_Indoor,Frying (food)
+362,25,Domestic_Indoor,Microwave oven
+363,25,Domestic_Indoor,Blender
+364,25,Domestic_Indoor,"Water tap, faucet"
+365,25,Domestic_Indoor,Sink (filling or washing)
+366,25,Domestic_Indoor,Bathtub (filling or washing)
+367,25,Domestic_Indoor,Hair dryer
+368,25,Domestic_Indoor,Toilet flush
+369,25,Domestic_Indoor,Toothbrush
+370,25,Domestic_Indoor,Electric toothbrush
+371,25,Domestic_Indoor,Vacuum cleaner
+372,25,Domestic_Indoor,Zipper (clothing)
+373,25,Domestic_Indoor,Keys jangling
+374,25,Domestic_Indoor,Coin (dropping)
+375,25,Domestic_Indoor,Scissors
+376,25,Domestic_Indoor,"Electric shaver, electric razor"
+377,25,Domestic_Indoor,Shuffling cards
+378,25,Domestic_Indoor,Typing
+379,25,Domestic_Indoor,Typewriter
+380,25,Domestic_Indoor,Computer keyboard
+381,25,Domestic_Indoor,Writing
+382,26,Alarm,Alarm
+383,25,Domestic_Indoor,Telephone
+384,25,Domestic_Indoor,Telephone bell ringing
+385,25,Domestic_Indoor,Ringtone
+386,25,Domestic_Indoor,"Telephone dialing, DTMF"
+387,25,Domestic_Indoor,Dial tone
+388,25,Domestic_Indoor,Busy signal
+389,26,Alarm,Alarm clock
+390,26,Alarm,Siren
+391,26,Alarm,Civil defense siren
+392,26,Alarm,Buzzer
+393,26,Alarm,"Smoke detector, smoke alarm"
+394,26,Alarm,Fire alarm
+395,26,Alarm,Foghorn
+396,26,Alarm,Whistle
+397,26,Alarm,Steam whistle
+398,27,Mechanism,Mechanisms
+399,27,Mechanism,"Ratchet, pawl"
+400,27,Mechanism,Clock
+401,27,Mechanism,Tick
+402,27,Mechanism,Tick-tock
+403,27,Mechanism,Gears
+404,27,Mechanism,Pulleys
+405,27,Mechanism,Sewing machine
+406,27,Mechanism,Mechanical fan
+407,27,Mechanism,Air conditioning
+408,27,Mechanism,Cash register
+409,27,Mechanism,Printer
+410,27,Mechanism,Camera
+411,27,Mechanism,Single-lens reflex camera
+412,28,Tools,Tools
+413,28,Tools,Hammer
+414,28,Tools,Jackhammer
+415,28,Tools,Sawing
+416,28,Tools,Filing (rasp)
+417,28,Tools,Sanding
+418,28,Tools,Power tool
+419,28,Tools,Drill
+420,29,Ordnance,Explosion
+421,29,Ordnance,"Gunshot, gunfire"
+422,29,Ordnance,Machine gun
+423,29,Ordnance,Fusillade
+424,29,Ordnance,Artillery fire
+425,29,Ordnance,Cap gun
+426,29,Ordnance,Fireworks
+427,29,Ordnance,Firecracker
+428,29,Ordnance,"Burst, pop"
+429,29,Ordnance,Eruption
+430,29,Ordnance,Boom
+431,30,Impact,Wood
+432,30,Impact,Chop
+433,30,Impact,Splinter
+434,30,Impact,Crack
+435,30,Impact,Glass
+436,30,Impact,"Chink, clink"
+437,30,Impact,Shatter
+438,31,Liquid,Liquid
+439,31,Liquid,"Splash, splatter"
+440,31,Liquid,Slosh
+441,31,Liquid,Squish
+442,31,Liquid,Drip
+443,31,Liquid,Pour
+444,31,Liquid,"Trickle, dribble"
+445,31,Liquid,Gush
+446,31,Liquid,Fill (with liquid)
+447,31,Liquid,Spray
+448,31,Liquid,Pump (liquid)
+449,31,Liquid,Stir
+450,31,Liquid,Boiling
+451,32,Electronic_Sound,Sonar
+452,30,Impact,Arrow
+453,30,Impact,"Whoosh, swoosh, swish"
+454,30,Impact,"Thump, thud"
+455,30,Impact,Thunk
+456,32,Electronic_Sound,Electronic tuner
+457,32,Electronic_Sound,Effects unit
+458,32,Electronic_Sound,Chorus effect
+459,30,Impact,Basketball bounce
+460,30,Impact,Bang
+461,30,Impact,"Slap, smack"
+462,30,Impact,"Whack, thwack"
+463,30,Impact,"Smash, crash"
+464,30,Impact,Breaking
+465,30,Impact,Bouncing
+466,30,Impact,Whip
+467,30,Impact,Flap
+468,30,Impact,Scratch
+469,30,Impact,Scrape
+470,30,Impact,Rub
+471,30,Impact,Roll
+472,30,Impact,Crushing
+473,30,Impact,"Crumpling, crinkling"
+474,30,Impact,Tearing
+475,32,Electronic_Sound,"Beep, bleep"
+476,32,Electronic_Sound,Ping
+477,32,Electronic_Sound,Ding
+478,32,Electronic_Sound,Clang
+479,32,Electronic_Sound,Squeal
+480,32,Electronic_Sound,Creak
+481,32,Electronic_Sound,Rustle
+482,32,Electronic_Sound,Whir
+483,32,Electronic_Sound,Clatter
+484,32,Electronic_Sound,Sizzle
+485,32,Electronic_Sound,Clicking
+486,32,Electronic_Sound,Clickety-clack
+487,32,Electronic_Sound,Rumble
+488,32,Electronic_Sound,Plop
+489,32,Electronic_Sound,"Jingle, tinkle"
+490,32,Electronic_Sound,Hum
+491,32,Electronic_Sound,Zing
+492,32,Electronic_Sound,Boing
+493,32,Electronic_Sound,Crunch
+494,34,Silence,Silence
+495,32,Electronic_Sound,Sine wave
+496,32,Electronic_Sound,Harmonic
+497,32,Electronic_Sound,Chirp tone
+498,32,Electronic_Sound,Sound effect
+499,32,Electronic_Sound,Pulse
+500,33,Ambient,"Inside, small room"
+501,33,Ambient,"Inside, large room or hall"
+502,33,Ambient,"Inside, public space"
+503,33,Ambient,"Outside, urban or manmade"
+504,33,Ambient,"Outside, rural or natural"
+505,33,Ambient,Reverberation
+506,33,Ambient,Echo
+507,33,Ambient,Noise
+508,33,Ambient,Environmental noise
+509,33,Ambient,Static
+510,33,Ambient,Mains hum
+511,33,Ambient,Distortion
+512,33,Ambient,Sidetone
+513,33,Ambient,Cacophony
+514,33,Ambient,White noise
+515,33,Ambient,Pink noise
+516,33,Ambient,Throbbing
+517,33,Ambient,Vibration
+518,33,Ambient,Television
+519,33,Ambient,Radio
+520,33,Ambient,Field recording
