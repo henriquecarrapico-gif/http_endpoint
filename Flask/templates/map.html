@@ -165,6 +165,15 @@
                     <span id="timeWindowVal" style="font-size: 13px; font-weight: bold; color: #e64a19; min-width: 38px; text-align: right;">3.0s</span>
                 </div>
             </div>
+            <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
+                <label for="azimuthUncertaintyInput" style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">📐 Angular Uncertainty</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" id="azimuthUncertaintyInput" min="1" max="25" step="0.5" value="5.0" 
+                        style="flex-grow: 1; accent-color: #d84315; cursor: pointer;"
+                        oninput="updateAzimuthUncertainty(this.value)">
+                    <span id="azimuthUncertaintyVal" style="font-size: 13px; font-weight: bold; color: #d84315; min-width: 38px; text-align: right;">±5.0°</span>
+                </div>
+            </div>
             <div class="node-list" id="nodeList">
                 <!-- Nodes dynamically injected here by JS -->
             </div>
@@ -240,7 +249,7 @@
         // Triangulation state
         const activeDetections = [];
         const activeTriangulations = new Set();
-        const AZIMUTH_UNCERTAINTY = 5.0; // ±5 degrees as requested
+        let AZIMUTH_UNCERTAINTY = 5.0; // Configurable ±degrees error envelope
         let TRIANGULATION_WINDOW_MS = 3000; // Configurable window in milliseconds
 
         function updateTimeWindow(val) {
@@ -249,6 +258,15 @@
                 TRIANGULATION_WINDOW_MS = seconds * 1000;
                 document.getElementById('timeWindowVal').innerText = seconds.toFixed(1) + 's';
                 console.log("Updated triangulation window to:", TRIANGULATION_WINDOW_MS, "ms");
+            }
+        }
+
+        function updateAzimuthUncertainty(val) {
+            const degrees = parseFloat(val);
+            if (!isNaN(degrees) && degrees > 0) {
+                AZIMUTH_UNCERTAINTY = degrees;
+                document.getElementById('azimuthUncertaintyVal').innerText = '±' + degrees.toFixed(1) + '°';
+                console.log("Updated azimuth uncertainty to:", AZIMUTH_UNCERTAINTY, "degrees");
             }
         }
 
