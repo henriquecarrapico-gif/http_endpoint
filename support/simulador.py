@@ -83,7 +83,7 @@ def fetch_node_coordinates():
     return 40.94490246, -8.40818614, 40.94475254, -8.40817004
 
 # Main simulation loop
-orbit_angle = 0.0
+t = 0.0  # Lemniscate parameter in radians
 
 while True:
     # 1. Fetch node positions dynamically from DB to pick up any UI drag updates
@@ -93,8 +93,40 @@ while True:
     lat_mid = (lat_A + lat_B) / 2.0
     lon_mid = (lon_A + lon_B) / 2.0
     
-    # 3. Calculate simulated moving target position (50m circular path)
-    lat_t, lon_t = get_destination_point(lat_mid, lon_mid, orbit_angle, 50.0)
+    # 3. Calculate simulated moving target position using Lemniscate of Bernoulli (Figure-8)
+    R = 6378137.0  # Earth's radius in meters
+    dy = (lat_B - lat_A) * math.pi / 180.0 * R
+    dx = (lon_B - lon_A) * math.pi / 180.0 * R * math.cos(lat_mid * math.pi / 180.0)
+    D = math.sqrt(dx**2 + dy**2)
+    
+    if D < 1e-3:
+        D = 100.0
+        dx = 100.0
+        dy = 0.0
+        
+    A = D / 2.0  # Maximum distance to either tower from midpoint
+    
+    # Unit direction vectors along and perpendicular to the tower alignment line
+    ex = dx / D
+    ey = dy / D
+    px = -ey
+    py = ex
+    
+    # Lemniscate of Bernoulli formulas
+    sin_t = math.sin(t)
+    cos_t = math.cos(t)
+    denom = 1.0 + sin_t**2
+    
+    u = (A * cos_t) / denom
+    v = (A * sin_t * cos_t) / denom
+    
+    # Rotate and translate target local coordinates back to global meters
+    x_offset = u * ex + v * px
+    y_offset = u * ey + v * py
+    
+    # Project back to Latitude and Longitude
+    lat_t = lat_mid + y_offset / R * 180.0 / math.pi
+    lon_t = lon_mid + x_offset / (R * math.cos(lat_mid * math.pi / 180.0)) * 180.0 / math.pi
     
     # 4. Calculate exact mathematical bearings from each node to target
     azimuth_A = calculate_bearing(lat_A, lon_A, lat_t, lon_t)
@@ -144,9 +176,9 @@ while True:
     except Exception as e:
         print("Failed to post Node B uplink:", e)
         
-    print(f"Orbit angle: {int(orbit_angle)}° | Target: {round(lat_t, 6)}, {round(lon_t, 6)}")
+    print(f"Path parameter t: {round(t, 2)} rad | Target: {round(lat_t, 6)}, {round(lon_t, 6)}")
     print("-" * 50)
     
-    # 7. Progress orbit (12 degrees per second = 30 second period)
-    orbit_angle = (orbit_angle + 12.0) % 360.0
+    # 7. Progress parameter (Lemniscate period is 30 seconds)
+    t = (t + (2.0 * math.pi / 30.0)) % (2.0 * math.pi)
     time.sleep(1.0)

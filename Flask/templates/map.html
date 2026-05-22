@@ -450,13 +450,19 @@
 
                 const color = getDetectionColor(det.type_code);
 
+                // Reduce the opacity and weight of the lines, except for when the typecode is 0 or 63.
+                const tcVal = parseInt(det.type_code);
+                const isImportantType = (tcVal === 0 || tcVal === 63);
+                const lineOpacity = isImportantType ? 0.8 : 0.25;
+                const lineWeight = isImportantType ? 4 : 2;
+
                 const detectionLine = L.polyline([
                     [node.latitude, node.longitude],
                     [destLat, destLng]
                 ], {
                     color: color,
-                    weight: 4,
-                    opacity: 0.8
+                    weight: lineWeight,
+                    opacity: lineOpacity
                 }).addTo(map);
 
                 // Fade out the bearing line
