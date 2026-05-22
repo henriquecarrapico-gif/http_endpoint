@@ -292,7 +292,8 @@ def uplink():
             emitted_detections.append({
                 "dev_eui": dev_eui,
                 "type_code": det.get("type_code"),
-                "azimuth": det.get("azimuth")
+                "azimuth": det.get("azimuth"),
+                "secs_since_midnight": det.get("secs_since_midnight")
             })
         socketio.emit('new_detections', emitted_detections)
     except psycopg2.Error as e:
@@ -320,7 +321,7 @@ def get_recent_detections():
             return jsonify({"status": "error", "message": "Database connection failed"}), 500
 
         cursor.execute("""
-            SELECT dev_eui, type_code, azimuth, EXTRACT(EPOCH FROM (NOW() - timestamp)) * 1000 AS age_ms
+            SELECT dev_eui, type_code, azimuth, EXTRACT(EPOCH FROM (NOW() - timestamp)) * 1000 AS age_ms, node_timestamp
             FROM detections 
             WHERE timestamp >= NOW() - INTERVAL '60 seconds'
         """)
@@ -332,7 +333,8 @@ def get_recent_detections():
                 "dev_eui": row[0],
                 "type_code": row[1],
                 "azimuth": row[2],
-                "age_ms": int(row[3]) if row[3] is not None else 0
+                "age_ms": int(row[3]) if row[3] is not None else 0,
+                "secs_since_midnight": row[4]
             })
         return jsonify(recent), 200
     except Exception as e:

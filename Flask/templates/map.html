@@ -157,21 +157,27 @@
                     onkeyup="filterSidebar()">
             </div>
             <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
-                <label for="timeWindowInput" style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">⏱️ Triangulation Window</label>
+                <label for="timeWindowInput"
+                    style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">⏱️
+                    Triangulation Window</label>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="timeWindowInput" min="1" max="15" step="0.5" value="3.0" 
+                    <input type="range" id="timeWindowInput" min="1" max="15" step="0.5" value="3.0"
                         style="flex-grow: 1; accent-color: #e64a19; cursor: pointer;"
                         oninput="updateTimeWindow(this.value)">
-                    <span id="timeWindowVal" style="font-size: 13px; font-weight: bold; color: #e64a19; min-width: 38px; text-align: right;">3.0s</span>
+                    <span id="timeWindowVal"
+                        style="font-size: 13px; font-weight: bold; color: #e64a19; min-width: 38px; text-align: right;">3.0s</span>
                 </div>
             </div>
             <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
-                <label for="azimuthUncertaintyInput" style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">📐 Angular Uncertainty</label>
+                <label for="azimuthUncertaintyInput"
+                    style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">📐
+                    Angular Uncertainty</label>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="azimuthUncertaintyInput" min="1" max="25" step="0.5" value="5.0" 
+                    <input type="range" id="azimuthUncertaintyInput" min="1" max="25" step="0.5" value="5.0"
                         style="flex-grow: 1; accent-color: #d84315; cursor: pointer;"
                         oninput="updateAzimuthUncertainty(this.value)">
-                    <span id="azimuthUncertaintyVal" style="font-size: 13px; font-weight: bold; color: #d84315; min-width: 38px; text-align: right;">±5.0°</span>
+                    <span id="azimuthUncertaintyVal"
+                        style="font-size: 13px; font-weight: bold; color: #d84315; min-width: 38px; text-align: right;">±5.0°</span>
                 </div>
             </div>
             <div class="node-list" id="nodeList">
@@ -336,7 +342,14 @@
             activeDetections.forEach(oldDet => {
                 // Triangulate only if they belong to different towers and occur within the configured time window
                 if (oldDet.dev_eui === newDet.dev_eui) return;
-                if (Math.abs(oldDet.timestamp - newDet.timestamp) > TRIANGULATION_WINDOW_MS) return;
+                
+                // Match exactly using the target's internal secs_since_midnight values (robust against network latency)
+                let timeDiff = Math.abs(newDet.secs_since_midnight - oldDet.secs_since_midnight);
+                if (timeDiff > 43200) {
+                    timeDiff = 86400 - timeDiff; // Correctly handle 24h midnight rollover
+                }
+                
+                if (timeDiff * 1000 > TRIANGULATION_WINDOW_MS) return;
 
                 const nodeB = nodesData.find(n => n.dev_eui === oldDet.dev_eui);
                 if (!nodeB) return;
@@ -372,7 +385,7 @@
 
                 let polyCoords = [];
                 let shapeType = "quadrilateral";
-                
+
                 if (P11 && P12 && P22 && P21) {
                     // Draw exact convex quadrilateral region
                     polyCoords = [
@@ -407,9 +420,12 @@
                 }).addTo(map);
 
                 // Bind a descriptive informative popup
-                const timeDiff = Math.abs(newDet.timestamp - oldDet.timestamp) / 1000.0;
+                let timeDiffSecs = Math.abs(newDet.secs_since_midnight - oldDet.secs_since_midnight);
+                if (timeDiffSecs > 43200) {
+                    timeDiffSecs = 86400 - timeDiffSecs;
+                }
                 const centerLatLng = localCartesianToLatLng(centralInt.x, centralInt.y, lat_org, lon_org);
-                
+
                 uncertaintyPoly.bindPopup(`
                     <div style="font-family: Arial, sans-serif; min-width: 220px; font-size: 13px;">
                         <h4 style="margin: 0 0 8px 0; color: #d84315; border-bottom: 2px solid #ffab91; padding-bottom: 4px; font-size: 14px;">🎯 Sound Source Triangulated</h4>
@@ -417,7 +433,7 @@
                         <span style="color: purple;">●</span> ${nodeA.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azA).toFixed(1)}°)<br/>
                         <span style="color: purple;">●</span> ${nodeB.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azB).toFixed(1)}°)<br/>
                         <div style="margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; font-size: 11px; color: #555;">
-                            <b>Coincidence Offset:</b> ${timeDiff.toFixed(2)} seconds<br/>
+                             <b>Coincidence Offset:</b> ${timeDiffSecs.toFixed(2)} seconds<br/>
                             <b>Estimated Origin:</b> ${centerLatLng[0].toFixed(6)}, ${centerLatLng[1].toFixed(6)}<br/>
                             <b>Geometry Mode:</b> ${shapeType}
                         </div>
@@ -453,11 +469,19 @@
             if (node) {
                 // 1. Record detection in active array
                 const now = Date.now();
+                let secsSinceMidnight = det.secs_since_midnight;
+                if (secsSinceMidnight === undefined || secsSinceMidnight === null) {
+                    // Fallback to browser local seconds since midnight if not provided
+                    const d = new Date(now - ageMs);
+                    secsSinceMidnight = d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds() + d.getMilliseconds() / 1000;
+                }
+
                 const detectionRecord = {
                     dev_eui: det.dev_eui,
                     azimuth: parseFloat(det.azimuth),
                     type_code: det.type_code,
-                    timestamp: now - ageMs
+                    timestamp: now - ageMs,
+                    secs_since_midnight: parseFloat(secsSinceMidnight)
                 };
                 activeDetections.push(detectionRecord);
 
@@ -573,7 +597,7 @@
                     altitude: node.altitude || 0,
                     range: node.range
                 };
-                
+
                 fetch(`/nodes/${node.dev_eui}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
@@ -645,7 +669,7 @@
                     altitude: gw.altitude || 0,
                     range: gw.range
                 };
-                
+
                 fetch(`/gateways/${gw.gateway_id}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
