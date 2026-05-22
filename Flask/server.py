@@ -323,7 +323,7 @@ def get_recent_detections():
         cursor.execute("""
             SELECT dev_eui, type_code, azimuth, EXTRACT(EPOCH FROM (NOW() - timestamp)) * 1000 AS age_ms, node_timestamp
             FROM detections 
-            WHERE timestamp >= NOW() - INTERVAL '60 seconds'
+            WHERE timestamp >= NOW() - INTERVAL '300 seconds'
         """)
         rows = cursor.fetchall()
         

@@ -180,6 +180,18 @@
                         style="font-size: 13px; font-weight: bold; color: #d84315; min-width: 38px; text-align: right;">±5.0°</span>
                 </div>
             </div>
+            <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
+                <label for="fadeOutInput"
+                    style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">🧹
+                    Fade Out Lifetime</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" id="fadeOutInput" min="10" max="300" step="5" value="60"
+                        style="flex-grow: 1; accent-color: #0288d1; cursor: pointer;"
+                        oninput="updateFadeOut(this.value)">
+                    <span id="fadeOutVal"
+                        style="font-size: 13px; font-weight: bold; color: #0288d1; min-width: 38px; text-align: right;">60s</span>
+                </div>
+            </div>
             <div class="node-list" id="nodeList">
                 <!-- Nodes dynamically injected here by JS -->
             </div>
@@ -257,6 +269,7 @@
         const activeTriangulations = new Set();
         let AZIMUTH_UNCERTAINTY = 5.0; // Configurable ±degrees error envelope
         let TRIANGULATION_WINDOW_MS = 3000; // Configurable window in milliseconds
+        let FADE_OUT_TIME_MS = 60000; // Configurable detection fadeout lifetime (default 60s)
 
         function updateTimeWindow(val) {
             const seconds = parseFloat(val);
@@ -273,6 +286,15 @@
                 AZIMUTH_UNCERTAINTY = degrees;
                 document.getElementById('azimuthUncertaintyVal').innerText = '±' + degrees.toFixed(1) + '°';
                 console.log("Updated azimuth uncertainty to:", AZIMUTH_UNCERTAINTY, "degrees");
+            }
+        }
+
+        function updateFadeOut(val) {
+            const seconds = parseFloat(val);
+            if (!isNaN(seconds) && seconds >= 10) {
+                FADE_OUT_TIME_MS = seconds * 1000;
+                document.getElementById('fadeOutVal').innerText = seconds.toFixed(0) + 's';
+                console.log("Updated fade out lifetime to:", FADE_OUT_TIME_MS, "ms");
             }
         }
 
@@ -441,10 +463,9 @@
                 `);
 
                 // Fade out the polygon over the remaining lifetime of the youngest detection in the pair
-                const ageLimit = 60000;
                 const elapsedNew = Date.now() - newDet.timestamp;
                 const elapsedOld = Date.now() - oldDet.timestamp;
-                const remainingTime = Math.max(0, ageLimit - Math.max(elapsedNew, elapsedOld));
+                const remainingTime = Math.max(0, FADE_OUT_TIME_MS - Math.max(elapsedNew, elapsedOld));
 
                 setTimeout(() => {
                     let opacity = 0.25;
@@ -485,8 +506,8 @@
                 };
                 activeDetections.push(detectionRecord);
 
-                // Auto-cleanup detection record after 60 seconds
-                const remainingTime = Math.max(0, 60000 - ageMs);
+                // Auto-cleanup detection record after FADE_OUT_TIME_MS
+                const remainingTime = Math.max(0, FADE_OUT_TIME_MS - ageMs);
                 setTimeout(() => {
                     const idx = activeDetections.indexOf(detectionRecord);
                     if (idx !== -1) {
@@ -902,8 +923,8 @@
                     if (Array.isArray(detections)) {
                         detections.forEach(det => {
                             if (det.age_ms !== undefined) {
-                                // Only draw if under 60 seconds old
-                                if (det.age_ms >= 0 && det.age_ms < 60000) {
+                                // Only draw if under the current FADE_OUT_TIME_MS
+                                if (det.age_ms >= 0 && det.age_ms < FADE_OUT_TIME_MS) {
                                     drawDetection(det, det.age_ms);
                                 }
                             }
