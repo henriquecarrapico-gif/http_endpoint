@@ -156,6 +156,15 @@
                     style="width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px;"
                     onkeyup="filterSidebar()">
             </div>
+            <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
+                <label for="timeWindowInput" style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">⏱️ Triangulation Window</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" id="timeWindowInput" min="1" max="15" step="0.5" value="3.0" 
+                        style="flex-grow: 1; accent-color: #e64a19; cursor: pointer;"
+                        oninput="updateTimeWindow(this.value)">
+                    <span id="timeWindowVal" style="font-size: 13px; font-weight: bold; color: #e64a19; min-width: 38px; text-align: right;">3.0s</span>
+                </div>
+            </div>
             <div class="node-list" id="nodeList">
                 <!-- Nodes dynamically injected here by JS -->
             </div>
@@ -232,6 +241,16 @@
         const activeDetections = [];
         const activeTriangulations = new Set();
         const AZIMUTH_UNCERTAINTY = 5.0; // ±5 degrees as requested
+        let TRIANGULATION_WINDOW_MS = 3000; // Configurable window in milliseconds
+
+        function updateTimeWindow(val) {
+            const seconds = parseFloat(val);
+            if (!isNaN(seconds) && seconds > 0) {
+                TRIANGULATION_WINDOW_MS = seconds * 1000;
+                document.getElementById('timeWindowVal').innerText = seconds.toFixed(1) + 's';
+                console.log("Updated triangulation window to:", TRIANGULATION_WINDOW_MS, "ms");
+            }
+        }
 
         // Local flat-earth Mercator coordinate conversion helpers
         function latLngToLocalCartesian(lat, lon, lat_org, lon_org) {
@@ -297,9 +316,9 @@
             if (!nodeA) return;
 
             activeDetections.forEach(oldDet => {
-                // Triangulate only if they belong to different towers and occur within a 3-second window
+                // Triangulate only if they belong to different towers and occur within the configured time window
                 if (oldDet.dev_eui === newDet.dev_eui) return;
-                if (Math.abs(oldDet.timestamp - newDet.timestamp) > 3000) return;
+                if (Math.abs(oldDet.timestamp - newDet.timestamp) > TRIANGULATION_WINDOW_MS) return;
 
                 const nodeB = nodesData.find(n => n.dev_eui === oldDet.dev_eui);
                 if (!nodeB) return;

@@ -24,6 +24,11 @@ print(f"Uplink Target URL: {URL}")
 NODE_A_EUI = "0409221920260001"
 NODE_B_EUI = "0409221920260002"
 
+# Simulation configuration (overrideable via environment variables)
+SIMULATION_PERIOD_SECS = float(os.getenv("SIMULATION_PERIOD_SECS", "120.0"))
+STEP_INTERVAL_SECS = float(os.getenv("STEP_INTERVAL_SECS", "0.5"))
+print(f"Simulation Period: {SIMULATION_PERIOD_SECS} seconds | Step Interval: {STEP_INTERVAL_SECS} seconds")
+
 # Spherical Earth geometry helpers
 def calculate_bearing(lat1, lon1, lat2, lon2):
     lat1_rad = math.radians(lat1)
@@ -179,6 +184,6 @@ while True:
     print(f"Path parameter t: {round(t, 2)} rad | Target: {round(lat_t, 6)}, {round(lon_t, 6)}")
     print("-" * 50)
     
-    # 7. Progress parameter (Lemniscate period is 30 seconds)
-    t = (t + (2.0 * math.pi / 30.0)) % (2.0 * math.pi)
-    time.sleep(1.0)
+    # 7. Progress parameter (Lemniscate period is configurable, default 120 seconds)
+    t = (t + (2.0 * math.pi / (SIMULATION_PERIOD_SECS / STEP_INTERVAL_SECS))) % (2.0 * math.pi)
+    time.sleep(STEP_INTERVAL_SECS)
