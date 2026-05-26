@@ -82,8 +82,8 @@ def main():
     parser = argparse.ArgumentParser(description="DIVS DOA Mic Tower Multi-Node Simulator")
     parser.add_argument("-n", "--nodes", type=int, help="Number of nodes to simulate")
     parser.add_argument("-u", "--url", type=str, default=URL, help="Gateway uplink URL")
-    parser.add_argument("-p", "--period", type=float, default=120.0, help="Simulation target sweep period in seconds")
-    parser.add_argument("-i", "--interval", type=float, default=0.5, help="Step time interval in seconds")
+    parser.add_argument("-p", "--period", type=float, default=60.0, help="Simulation target sweep period in seconds")
+    parser.add_argument("-i", "--interval", type=float, default=0.2, help="Step time interval in seconds")
     args = parser.parse_args()
 
     target_url = args.url
