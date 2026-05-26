@@ -80,7 +80,7 @@ def get_nodes():
         if not conn or not cursor:
             return jsonify({"status": "error", "message": "Database connection failed"}), 500
 
-        cursor.execute("SELECT dev_eui, name, latitude, longitude, altitude, range, connected_gateway FROM nodes")
+        cursor.execute("SELECT dev_eui, name, latitude, longitude, altitude, range, connected_gateway, health_status, last_health_check FROM nodes")
         rows = cursor.fetchall()
         
         nodes = []
@@ -92,7 +92,9 @@ def get_nodes():
                 "longitude": row[3],
                 "altitude": row[4],
                 "range": row[5],
-                "connected_gateway": row[6]
+                "connected_gateway": row[6],
+                "health_status": row[7],
+                "last_health_check": row[8].isoformat() if row[8] else None
             })
         return jsonify(nodes), 200
     except Exception as e:
@@ -284,17 +286,24 @@ def uplink():
 
     # Prepare batch data
     insert_values = []
+    health_update = None  # Will be set if a mic-check detection is found
     for det in detections:
-        type_code = det.get("type_code")
+        class_id = det.get("class_id")
         azimuth = det.get("azimuth")
         
         # Skip detections with missing azimuth to prevent database insert errors
         if azimuth is None:
             continue
             
-        node_timestamp = det.get("secs_since_midnight")
+        node_time = det.get("node_time")
         
-        insert_values.append((dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr))
+        # Track mic-check health status (1022=OK, 1023=error)
+        if class_id == 1022:
+            health_update = 'ok'
+        elif class_id == 1023:
+            health_update = 'error'
+        
+        insert_values.append((dev_eui, timestamp, class_id, azimuth, node_time, rssi, snr))
 
     if not insert_values:
         app.logger.warning("No valid detections with azimuth found in uplink.")
@@ -309,10 +318,22 @@ def uplink():
         # Use execute_values for efficient bulk insert
         insert_query = """
             INSERT INTO detections
-                (dev_eui, timestamp, type_code, azimuth, node_timestamp, rssi, snr)
+                (dev_eui, timestamp, class_id, azimuth, node_time, rssi, snr)
             VALUES %s
         """
         execute_values(cursor, insert_query, insert_values)
+        
+        # Update node health status if mic-check detection was received
+        if health_update and dev_eui:
+            cursor.execute(
+                """
+                UPDATE nodes
+                SET health_status = %s, last_health_check = NOW()
+                WHERE dev_eui = %s
+                """,
+                (health_update, dev_eui)
+            )
+        
         conn.commit()
         
         # Emit to connected clients via WebSocket
@@ -322,14 +343,21 @@ def uplink():
                 continue
             emitted_detections.append({
                 "dev_eui": dev_eui,
-                "type_code": det.get("type_code"),
+                "class_id": det.get("class_id"),
                 "azimuth": det.get("azimuth"),
-                "secs_since_midnight": det.get("secs_since_midnight"),
+                "node_time": det.get("node_time"),
                 "timestamp": timestamp,
                 "rssi": rssi,
                 "snr": snr
             })
-        socketio.emit('new_detections', emitted_detections)
+        socketio.emit('new_detections', emitted_detections);
+        
+        # Emit health status update if mic-check was received
+        if health_update and dev_eui:
+            socketio.emit('node_health', {
+                'dev_eui': dev_eui,
+                'health_status': health_update
+            });
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
@@ -355,7 +383,7 @@ def get_recent_detections():
             return jsonify({"status": "error", "message": "Database connection failed"}), 500
 
         cursor.execute("""
-            SELECT dev_eui, type_code, azimuth, EXTRACT(EPOCH FROM (NOW() - timestamp)) * 1000 AS age_ms, node_timestamp
+            SELECT dev_eui, class_id, azimuth, EXTRACT(EPOCH FROM (NOW() - timestamp)) * 1000 AS age_ms, node_time
             FROM detections 
             WHERE timestamp >= NOW() - INTERVAL '300 seconds'
         """)
@@ -365,10 +393,10 @@ def get_recent_detections():
         for row in rows:
             recent.append({
                 "dev_eui": row[0],
-                "type_code": row[1],
+                "class_id": row[1],
                 "azimuth": row[2],
                 "age_ms": int(row[3]) if row[3] is not None else 0,
-                "secs_since_midnight": row[4]
+                "node_time": row[4]
             })
         return jsonify(recent), 200
     except Exception as e:

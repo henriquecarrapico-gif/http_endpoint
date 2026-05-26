@@ -1,37 +1,35 @@
 function decodeUplink(input) {
     var b = input.bytes;
 
-    // Ensure the payload is a multiple of 4 bytes (e.g. 4, 8, 12, 40 bytes)
-    if (b.length % 4 !== 0 || b.length === 0) {
-        return { errors: ["payload size invalid: expected multiple of 4 bytes, got " + b.length] };
+    // Each detection is 5 bytes (40 bits): [azimuth:10][class_id:10][node_time:20]
+    if (b.length % 5 !== 0 || b.length === 0) {
+        return { errors: ["payload size invalid: expected multiple of 5 bytes, got " + b.length] };
     }
 
     var detections = [];
 
-    // Loop through the byte array, jumping by 4 bytes each time
-    for (var i = 0; i < b.length; i += 4) {
+    for (var i = 0; i < b.length; i += 5) {
 
-        // 1. Reassemble the next 4 bytes into a single 32-bit integer.
-        var payload_32bit = ((b[i] << 24) | (b[i + 1] << 16) | (b[i + 2] << 8) | b[i + 3]) >>> 0;
+        // Reassemble 5 bytes into a 40-bit value using hi byte + lo 32-bit word
+        var hi = b[i];
+        var lo = ((b[i + 1] << 24) | (b[i + 2] << 16) | (b[i + 3] << 8) | b[i + 4]) >>> 0;
 
-        // Time is the bottom 17 bits. We mask off the rest with 0x1FFFF.
-        var secsSinceMidnight = payload_32bit & 0x1FFFF;
+        // Azimuth is the top 10 bits (bits 30-39): hi >> 2
+        var azimuthRaw = (hi >>> 2) & 0x3FF;
 
-        // Type is the next 6 bits (bits 17-22). We shift right by 17, then mask with 0x3F.
-        var typeCode = (payload_32bit >>> 17) & 0x3F;
+        // Class ID is the next 10 bits (bits 20-29): bottom 2 of hi + top 8 of lo
+        var classId = ((hi & 0x03) << 8) | (lo >>> 24);
 
-        // Azimuth is the next 9 bits (bits 23-31). We shift right by 23, then mask with 0x1FF.
-        var azimuth = (payload_32bit >>> 23) & 0x1FF;
+        // Node time is the bottom 20 bits (bits 0-19) in deciseconds
+        var deciSecs = lo & 0xFFFFF;
 
-        // Push this individual detection to our array
         detections.push({
-            type_code: typeCode,
-            azimuth: azimuth,
-            secs_since_midnight: secsSinceMidnight
+            class_id:  classId,
+            azimuth:   azimuthRaw * 360.0 / 1024.0,
+            node_time: deciSecs / 10.0
         });
     }
 
-    // 3. Return the decoded JSON array
     return {
         data: {
             detections: detections

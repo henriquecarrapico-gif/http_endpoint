@@ -183,10 +183,12 @@
                 transform: scale(0.3);
                 opacity: 0.8;
             }
+
             80% {
                 transform: scale(1.2);
                 opacity: 0;
             }
+
             100% {
                 transform: scale(1.2);
                 opacity: 0;
@@ -199,7 +201,7 @@
 
     <div id="map-container">
         <div id="map"></div>
-        
+
 
 
         <div id="sidebar">
@@ -711,11 +713,11 @@
         // Checks recently active detections to see if any can be triangulated with the new one
         function checkTriangulation(newDet) {
             const now = Date.now();
-            
+
             // Filter active detections from other towers within the triangulation window
             const coincident = activeDetections.filter(d => {
                 if (d.dev_eui === newDet.dev_eui) return false;
-                const diff = getSecsDifference(d.secs_since_midnight, newDet.secs_since_midnight);
+                const diff = getSecsDifference(d.node_time, newDet.node_time);
                 return diff * 1000 <= TRIANGULATION_WINDOW_MS;
             });
 
@@ -812,7 +814,7 @@
             });
 
             // Resolve sound group color for the pulse marker
-            const classInfo = window.soundClasses[newDet.type_code];
+            const classInfo = window.soundClasses[newDet.class_id];
             const gName = classInfo ? classInfo.group_name : 'Unknown';
             const groupColor = getGroupColor(gName);
 
@@ -836,14 +838,14 @@
                 const prevLatLng = activeAircraftMarker.getLatLng();
                 const prevRadius = activeAircraftUncertainty.getRadius();
                 const prevColor = activeAircraftUncertainty.options.color;
-                
+
                 addTrailPoint(prevLatLng, prevRadius, prevColor, centerLatLng);
 
                 // Smoothly pan the aircraft to its newly triangulated center!
                 activeAircraftMarker.setLatLng(centerLatLng);
                 activeAircraftUncertainty.setLatLng(centerLatLng);
                 activeAircraftUncertainty.setRadius(max_spread);
-                
+
                 // Reset styles to full opacity and color
                 activeAircraftUncertainty.setStyle({
                     color: groupColor,
@@ -909,9 +911,9 @@
                     <div style="margin-top: 8px; border-top: 1px dashed #334155; padding-top: 6px; font-size: 11px; color: #94a3b8;">
                         <b>Tracking Detections:</b><br/>
                         ${towers.map(t => {
-                            const node = nodesData.find(n => n.dev_eui === t.dev_eui);
-                            return `● ${node ? node.name : t.dev_eui.substring(0,8)} (Azimuth: ${parseFloat(t.azimuth).toFixed(1)}°)`;
-                        }).join('<br/>')}
+                const node = nodesData.find(n => n.dev_eui === t.dev_eui);
+                return `● ${node ? node.name : t.dev_eui.substring(0, 8)} (Azimuth: ${parseFloat(t.azimuth).toFixed(1)}°)`;
+            }).join('<br/>')}
                     </div>
                 </div>
             `;
@@ -925,7 +927,7 @@
             if (det.azimuth === null || det.azimuth === undefined) return;
 
             const now = Date.now();
-            let secsSinceMidnight = det.secs_since_midnight;
+            let secsSinceMidnight = det.node_time;
             if (secsSinceMidnight === undefined || secsSinceMidnight === null) {
                 // Fallback to browser local seconds since midnight if not provided
                 const d = new Date(now - ageMs);
@@ -937,9 +939,9 @@
                 const detectionRecord = {
                     dev_eui: det.dev_eui,
                     azimuth: parseFloat(det.azimuth),
-                    type_code: det.type_code,
+                    class_id: det.class_id,
                     timestamp: now - ageMs,
-                    secs_since_midnight: parseFloat(secsSinceMidnight)
+                    node_time: parseFloat(secsSinceMidnight)
                 };
                 activeDetections.push(detectionRecord);
 
@@ -968,14 +970,14 @@
                 const destLng = lon2 * 180 / Math.PI;
 
                 // Look up group name in soundClasses to determine the color
-                const classInfo = window.soundClasses[det.type_code];
+                const classInfo = window.soundClasses[det.class_id];
                 const gName = classInfo ? classInfo.group_name : 'Unknown';
                 const color = getGroupColor(gName);
 
                 // Reduce the opacity and weight of the lines to be very transparent so that the blob and its trail stand out.
-                const tcVal = parseInt(det.type_code);
-                const isImportantType = (tcVal === 0 || tcVal === 63);
-                const lineOpacity = isImportantType ? 0.4 : 0.12;
+                const classIdVal = parseInt(det.class_id);
+                const isImportantType = (classIdVal === 1022 || classIdVal === 1023);
+                const lineOpacity = isImportantType ? 1 : 0.12;
                 const lineWeight = isImportantType ? 3.0 : 1.5;
 
                 const remainingLineTime = Math.max(0, LINE_LIFETIME_MS - ageMs);
@@ -1002,10 +1004,21 @@
 
 
 
-        // Websocket trigger
+        // Websocket triggers
         socket.on('new_detections', function (detections) {
             console.log("Received new detections:", detections);
             detections.forEach(det => drawDetection(det, 0));
+        });
+
+        // Real-time node health updates from mic-check results
+        socket.on('node_health', function (data) {
+            const node = nodesData.find(n => n.dev_eui === data.dev_eui);
+            if (node) {
+                node.health_status = data.health_status;
+                node.last_health_check = new Date().toISOString();
+                drawNode(node); // Redraw the node marker with the updated health color
+                renderSidebar();
+            }
         });
 
         // Configure the map to render horizontally continuously
@@ -1021,17 +1034,27 @@
                 }
             }
 
+            // Determine node dot color based on health status
+            const healthColor = node.health_status === 'ok' ? '#22c55e'
+                : node.health_status === 'error' ? '#ef4444'
+                    : '#9ca3af'; // gray for unknown
+
             const nodeIcon = L.divIcon({
                 className: 'custom-node-icon',
-                html: '<div style="background-color:purple; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>',
+                html: `<div style="background-color:${healthColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
             });
 
+            const healthLabel = node.health_status === 'ok' ? 'Healthy'
+                : node.health_status === 'error' ? 'Mic Error'
+                    : 'Unknown';
+            const lastCheck = node.last_health_check ? new Date(node.last_health_check).toLocaleString() : 'Never';
+
             const marker = L.marker([node.latitude, node.longitude], {
                 icon: nodeIcon,
                 draggable: true
-            }).addTo(map).bindPopup(`<b>Node Name:</b> ${node.name || 'Unnamed'}<br><b>Device EUI:</b> ${node.dev_eui}<br><b>Altitude:</b> ${node.altitude || 0}m<br><b>Range:</b> ${node.range}m`);
+            }).addTo(map).bindPopup(`<b>Node Name:</b> ${node.name || 'Unnamed'}<br><b>Device EUI:</b> ${node.dev_eui}<br><b>Altitude:</b> ${node.altitude || 0}m<br><b>Range:</b> ${node.range}m<br><b>Health:</b> ${healthLabel}<br><b>Last Check:</b> ${lastCheck}`);
 
             let tooltip = null;
             if (node.name) {
