@@ -35,16 +35,20 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
 
 def get_db_connection():
     host = os.getenv('POSTGRES_HOST', 'localhost')
+    if host:
+        host = host.strip()
     # If host env is 'postgres' (docker-compose) but script runs on host, fallback to localhost
     if host == 'postgres' and not os.path.exists('/.dockerenv'):
         host = 'localhost'
-        
+    connect_timeout = int(os.getenv('POSTGRES_CONNECT_TIMEOUT', '5'))
+
     return psycopg2.connect(
         database=os.getenv('POSTGRES_DB', 'postgres'),
         user=os.getenv('POSTGRES_USER', 'postgres'),
         password=os.getenv('POSTGRES_PASSWORD', 'postgres'),
         host=host,
-        port=os.getenv('POSTGRES_PORT', '5432')
+        port=os.getenv('POSTGRES_PORT', '5432'),
+        connect_timeout=connect_timeout
     )
 
 def fetch_node_coords_live(dev_eui_list):
@@ -371,4 +375,8 @@ def main():
         time.sleep(args.interval)
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("\nSimulation interrupted by user. Exiting gracefully.")
+        sys.exit(0)
