@@ -341,8 +341,7 @@ def main():
             
             azimuth = calculate_bearing(lat_node, lon_node, lat_t, lon_t)
             
-            # Sound alarm types (390: Siren, 391: Civil Defense, 392: Buzzer, 394: Fire Alarm, etc.)
-            type_code = 390 + (i % 7)
+            type_code = 30 + (i % 3)
             
             payload = {
                 "deviceInfo": {"devEui": eui},
