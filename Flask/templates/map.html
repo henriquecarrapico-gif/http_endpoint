@@ -339,6 +339,10 @@
         let activeAircraftMarker = null;
         let activeAircraftUncertainty = null;
         let aircraftFadeTimeout = null;
+        let aircraftFadeInterval = null;
+        let aircraftTrail = []; // Array of { latLng: [lat, lon], radius: meters, color: hex, circle: L.circle }
+        let aircraftTrailPath = null; // L.polyline connecting coordinates
+        const MAX_TRAIL_POINTS = 15;
 
         // Helper to handle 24h midnight rollover for seconds past midnight
         function getSecsDifference(t1, t2) {
@@ -434,6 +438,69 @@
             return null;
         }
 
+        // Add a historical breadcrumb to the aircraft radar tracking trail
+        function addTrailPoint(latLng, radius, color, activeLatLng) {
+            // Create a Leaflet circle for this trail point
+            // The size represents the historical uncertainty
+            const trailCircle = L.circle(latLng, {
+                radius: radius,
+                color: color,
+                weight: 1,
+                dashArray: '3, 4',
+                fillColor: color,
+                fillOpacity: 0.03,
+                opacity: 0.15,
+                interactive: false
+            }).addTo(map);
+
+            aircraftTrail.push({
+                latLng: latLng,
+                radius: radius,
+                color: color,
+                circle: trailCircle
+            });
+
+            // Cap the trail length to MAX_TRAIL_POINTS
+            if (aircraftTrail.length > MAX_TRAIL_POINTS) {
+                const oldest = aircraftTrail.shift();
+                if (oldest.circle) {
+                    map.removeLayer(oldest.circle);
+                }
+            }
+
+            // Recalculate opacities for the entire trail to create a smooth fade-out gradient
+            // The newest item (at the end of the array) has the highest opacity, decaying to the oldest
+            const len = aircraftTrail.length;
+            aircraftTrail.forEach((point, index) => {
+                const ratio = (index + 1) / len;
+                const targetOpacity = 0.20 * ratio;
+                const targetFillOpacity = 0.04 * ratio;
+                point.circle.setStyle({
+                    opacity: targetOpacity,
+                    fillOpacity: targetFillOpacity
+                });
+            });
+
+            // Redraw the dashed polyline connecting all trail coordinates
+            const pathCoords = aircraftTrail.map(pt => pt.latLng);
+            if (activeLatLng) {
+                pathCoords.push(activeLatLng);
+            }
+
+            if (aircraftTrailPath) {
+                aircraftTrailPath.setStyle({ opacity: 0.35 });
+                aircraftTrailPath.setLatLngs(pathCoords);
+            } else {
+                aircraftTrailPath = L.polyline(pathCoords, {
+                    color: '#64748b', // default slate
+                    weight: 1.5,
+                    dashArray: '4, 6',
+                    opacity: 0.35,
+                    interactive: false
+                }).addTo(map);
+            }
+        }
+
         // Checks recently active detections to see if any can be triangulated with the new one
         function checkTriangulation(newDet) {
             const now = Date.now();
@@ -525,10 +592,14 @@
             const gName = classInfo ? classInfo.group_name : 'Unknown';
             const groupColor = getGroupColor(gName);
 
-            // Cancel any pending fadeout timeouts
+            // Cancel any pending fadeout timeouts or intervals
             if (aircraftFadeTimeout) {
                 clearTimeout(aircraftFadeTimeout);
                 aircraftFadeTimeout = null;
+            }
+            if (aircraftFadeInterval) {
+                clearInterval(aircraftFadeInterval);
+                aircraftFadeInterval = null;
             }
 
             // Restore marker visibility in case it was actively fading out
@@ -537,11 +608,25 @@
             }
 
             if (activeAircraftMarker && activeAircraftUncertainty) {
+                // Before moving the aircraft to the new centerLatLng, push its current state to the trail!
+                const prevLatLng = activeAircraftMarker.getLatLng();
+                const prevRadius = activeAircraftUncertainty.getRadius();
+                const prevColor = activeAircraftUncertainty.options.color;
+                
+                addTrailPoint(prevLatLng, prevRadius, prevColor, centerLatLng);
+
                 // Smoothly pan the aircraft to its newly triangulated center!
                 activeAircraftMarker.setLatLng(centerLatLng);
                 activeAircraftUncertainty.setLatLng(centerLatLng);
                 activeAircraftUncertainty.setRadius(max_spread);
-                activeAircraftUncertainty.setStyle({ color: groupColor, fillColor: groupColor });
+                
+                // Reset styles to full opacity and color
+                activeAircraftUncertainty.setStyle({
+                    color: groupColor,
+                    fillColor: groupColor,
+                    opacity: 1.0,
+                    fillOpacity: 0.08
+                });
 
                 // Synchronize HTML styling inside L.divIcon dynamically
                 const iconDiv = activeAircraftMarker.getElement();
@@ -580,6 +665,12 @@
                 });
 
                 activeAircraftMarker = L.marker(centerLatLng, { icon: innerIcon }).addTo(map);
+
+                // Initialize the trail polyline path with the single current coordinate
+                if (aircraftTrailPath) {
+                    aircraftTrailPath.setLatLngs([centerLatLng]);
+                    aircraftTrailPath.setStyle({ opacity: 0.35 });
+                }
             }
 
             // Bind high-tech popup status report
@@ -605,14 +696,27 @@
             // Programmatic radar phosphor fadeout if target signal is lost
             aircraftFadeTimeout = setTimeout(() => {
                 let opacity = 1.0;
-                const fadeInterval = setInterval(() => {
+                aircraftFadeInterval = setInterval(() => {
                     opacity -= 0.05;
                     if (opacity <= 0) {
-                        clearInterval(fadeInterval);
+                        clearInterval(aircraftFadeInterval);
+                        aircraftFadeInterval = null;
                         if (activeAircraftUncertainty) map.removeLayer(activeAircraftUncertainty);
                         if (activeAircraftMarker) map.removeLayer(activeAircraftMarker);
                         activeAircraftUncertainty = null;
                         activeAircraftMarker = null;
+
+                        // Clear and remove trail circles
+                        aircraftTrail.forEach(pt => {
+                            if (pt.circle) map.removeLayer(pt.circle);
+                        });
+                        aircraftTrail = [];
+
+                        // Remove trail polyline
+                        if (aircraftTrailPath) {
+                            map.removeLayer(aircraftTrailPath);
+                            aircraftTrailPath = null;
+                        }
                     } else {
                         if (activeAircraftUncertainty) {
                             activeAircraftUncertainty.setStyle({ fillOpacity: opacity * 0.08, opacity: opacity });
@@ -620,6 +724,18 @@
                         if (activeAircraftMarker) {
                             const el = activeAircraftMarker.getElement();
                             if (el) el.style.opacity = opacity;
+                        }
+                        // Fade trail circles too
+                        aircraftTrail.forEach((pt, index) => {
+                            const ratio = (index + 1) / aircraftTrail.length;
+                            pt.circle.setStyle({
+                                opacity: opacity * 0.20 * ratio,
+                                fillOpacity: opacity * 0.04 * ratio
+                            });
+                        });
+                        // Fade trail polyline
+                        if (aircraftTrailPath) {
+                            aircraftTrailPath.setStyle({ opacity: opacity * 0.35 });
                         }
                     }
                 }, 50);
