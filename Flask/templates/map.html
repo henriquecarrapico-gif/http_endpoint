@@ -356,6 +356,7 @@
         let aircraftTrail = []; // Array of { latLng: [lat, lon], radius: meters, color: hex, circle: L.circle }
         let aircraftTrailPath = null; // L.polyline connecting coordinates
         const MAX_TRAIL_POINTS = 15;
+        let lastTriangulationTime = 0;
 
         // Helper to handle 24h midnight rollover for seconds past midnight
         function getSecsDifference(t1, t2) {
@@ -396,6 +397,7 @@
                 document.getElementById('fadeOutVal').innerText = seconds.toFixed(0) + 's';
                 document.getElementById('fadeOutInput').value = val;
                 console.log("Updated fade out lifetime to:", FADE_OUT_TIME_MS, "ms");
+                rescheduleAircraftFadeOut();
             }
         }
 
@@ -407,6 +409,113 @@
                 document.getElementById('lineLifetimeVal').innerText = seconds.toFixed(0) + 's';
                 document.getElementById('lineLifetimeInput').value = val;
                 console.log("Updated line lifetime to:", LINE_LIFETIME_MS, "ms");
+            }
+        }
+
+        function rescheduleAircraftFadeOut() {
+            if (!activeAircraftMarker) return; // No active aircraft to fade out
+
+            // Clear any existing fadeout timeouts or intervals
+            if (aircraftFadeTimeout) {
+                clearTimeout(aircraftFadeTimeout);
+                aircraftFadeTimeout = null;
+            }
+            if (aircraftFadeInterval) {
+                clearInterval(aircraftFadeInterval);
+                aircraftFadeInterval = null;
+            }
+
+            // Restore marker visibility to full
+            const markerEl = activeAircraftMarker.getElement();
+            if (markerEl) {
+                markerEl.style.opacity = '1';
+            }
+            if (activeAircraftUncertainty) {
+                activeAircraftUncertainty.setStyle({
+                    opacity: 1.0,
+                    fillOpacity: 0.08
+                });
+            }
+            aircraftTrail.forEach((pt, index) => {
+                const ratio = (index + 1) / aircraftTrail.length;
+                pt.circle.setStyle({
+                    opacity: 0.20 * ratio,
+                    fillOpacity: 0.04 * ratio
+                });
+            });
+            if (aircraftTrailPath) {
+                aircraftTrailPath.setStyle({ opacity: 0.35 });
+            }
+
+            const elapsed = Date.now() - lastTriangulationTime;
+            const remaining = Math.max(0, FADE_OUT_TIME_MS - elapsed);
+
+            if (remaining <= 0) {
+                // If it already expired, remove it immediately
+                if (activeAircraftUncertainty) map.removeLayer(activeAircraftUncertainty);
+                if (activeAircraftMarker) map.removeLayer(activeAircraftMarker);
+                activeAircraftUncertainty = null;
+                activeAircraftMarker = null;
+
+                // Clear and remove trail circles
+                aircraftTrail.forEach(pt => {
+                    if (pt.circle) map.removeLayer(pt.circle);
+                });
+                aircraftTrail = [];
+
+                // Remove trail polyline
+                if (aircraftTrailPath) {
+                    map.removeLayer(aircraftTrailPath);
+                    aircraftTrailPath = null;
+                }
+            } else {
+                // Start a new fadeout timeout
+                aircraftFadeTimeout = setTimeout(() => {
+                    let opacity = 1.0;
+                    aircraftFadeInterval = setInterval(() => {
+                        opacity -= 0.05;
+                        if (opacity <= 0) {
+                            clearInterval(aircraftFadeInterval);
+                            aircraftFadeInterval = null;
+                            if (activeAircraftUncertainty) map.removeLayer(activeAircraftUncertainty);
+                            if (activeAircraftMarker) map.removeLayer(activeAircraftMarker);
+                            activeAircraftUncertainty = null;
+                            activeAircraftMarker = null;
+
+                            // Clear and remove trail circles
+                            aircraftTrail.forEach(pt => {
+                                if (pt.circle) map.removeLayer(pt.circle);
+                            });
+                            aircraftTrail = [];
+
+                            // Remove trail polyline
+                            if (aircraftTrailPath) {
+                                map.removeLayer(aircraftTrailPath);
+                                aircraftTrailPath = null;
+                            }
+                        } else {
+                            if (activeAircraftUncertainty) {
+                                activeAircraftUncertainty.setStyle({ fillOpacity: opacity * 0.08, opacity: opacity });
+                            }
+                            if (activeAircraftMarker) {
+                                const el = activeAircraftMarker.getElement();
+                                if (el) el.style.opacity = opacity;
+                            }
+                            // Fade trail circles too
+                            aircraftTrail.forEach((pt, index) => {
+                                const ratio = (index + 1) / aircraftTrail.length;
+                                pt.circle.setStyle({
+                                    opacity: opacity * 0.20 * ratio,
+                                    fillOpacity: opacity * 0.04 * ratio
+                                });
+                            });
+                            // Fade trail polyline
+                            if (aircraftTrailPath) {
+                                aircraftTrailPath.setStyle({ opacity: opacity * 0.35 });
+                            }
+                        }
+                    }, 50);
+                }, remaining);
             }
         }
 
@@ -642,6 +751,7 @@
             const avg_y = sum_y / intersections.length;
 
             const centerLatLng = localCartesianToLatLng(avg_x, avg_y, lat_org, lon_org);
+            lastTriangulationTime = newDet.timestamp;
 
             // Compute the max spread of intersections (uncertainty boundary radius in meters)
             let max_spread = 20.0; // Minimum visual boundary
@@ -651,6 +761,22 @@
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 if (dist > max_spread) {
                     max_spread = dist;
+                }
+            });
+
+            // Factor in the Angular Uncertainty based on distance from the participating towers to the target centroid
+            towers.forEach(t => {
+                const node = nodesData.find(n => n.dev_eui === t.dev_eui);
+                if (node) {
+                    const pos = latLngToLocalCartesian(node.latitude, node.longitude, lat_org, lon_org);
+                    const dx = avg_x - pos.x;
+                    const dy = avg_y - pos.y;
+                    const distToTarget = Math.sqrt(dx * dx + dy * dy);
+                    const angularUncertaintyRad = (AZIMUTH_UNCERTAINTY * Math.PI) / 180;
+                    const lateralUncertainty = distToTarget * Math.sin(angularUncertaintyRad);
+                    if (lateralUncertainty > max_spread) {
+                        max_spread = lateralUncertainty;
+                    }
                 }
             });
 
@@ -761,52 +887,7 @@
             activeAircraftUncertainty.bindPopup(popupContent);
 
             // Programmatic radar phosphor fadeout if target signal is lost
-            aircraftFadeTimeout = setTimeout(() => {
-                let opacity = 1.0;
-                aircraftFadeInterval = setInterval(() => {
-                    opacity -= 0.05;
-                    if (opacity <= 0) {
-                        clearInterval(aircraftFadeInterval);
-                        aircraftFadeInterval = null;
-                        if (activeAircraftUncertainty) map.removeLayer(activeAircraftUncertainty);
-                        if (activeAircraftMarker) map.removeLayer(activeAircraftMarker);
-                        activeAircraftUncertainty = null;
-                        activeAircraftMarker = null;
-
-                        // Clear and remove trail circles
-                        aircraftTrail.forEach(pt => {
-                            if (pt.circle) map.removeLayer(pt.circle);
-                        });
-                        aircraftTrail = [];
-
-                        // Remove trail polyline
-                        if (aircraftTrailPath) {
-                            map.removeLayer(aircraftTrailPath);
-                            aircraftTrailPath = null;
-                        }
-                    } else {
-                        if (activeAircraftUncertainty) {
-                            activeAircraftUncertainty.setStyle({ fillOpacity: opacity * 0.08, opacity: opacity });
-                        }
-                        if (activeAircraftMarker) {
-                            const el = activeAircraftMarker.getElement();
-                            if (el) el.style.opacity = opacity;
-                        }
-                        // Fade trail circles too
-                        aircraftTrail.forEach((pt, index) => {
-                            const ratio = (index + 1) / aircraftTrail.length;
-                            pt.circle.setStyle({
-                                opacity: opacity * 0.20 * ratio,
-                                fillOpacity: opacity * 0.04 * ratio
-                            });
-                        });
-                        // Fade trail polyline
-                        if (aircraftTrailPath) {
-                            aircraftTrailPath.setStyle({ opacity: opacity * 0.35 });
-                        }
-                    }
-                }, 50);
-            }, FADE_OUT_TIME_MS);
+            rescheduleAircraftFadeOut();
         }
 
         function drawDetection(det, ageMs = 0) {
@@ -863,8 +944,8 @@
                 // Reduce the opacity and weight of the lines to be very transparent so that the blob and its trail stand out.
                 const tcVal = parseInt(det.type_code);
                 const isImportantType = (tcVal === 0 || tcVal === 63);
-                const lineOpacity = isImportantType ? 0.25 : 0.06;
-                const lineWeight = isImportantType ? 2.5 : 1.2;
+                const lineOpacity = isImportantType ? 0.4 : 0.12;
+                const lineWeight = isImportantType ? 3.0 : 1.5;
 
                 const remainingLineTime = Math.max(0, LINE_LIFETIME_MS - ageMs);
                 if (remainingLineTime > 0) {
