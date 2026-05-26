@@ -149,6 +149,49 @@
             color: #333;
             text-shadow: 1px 1px 2px white, -1px -1px 2px white, 1px -1px 2px white, -1px 1px 2px white;
         }
+
+        /* Pulsating Aircraft Radar Blob styles */
+        .aircraft-pulse-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .radar-pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            z-index: 2;
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .radar-pulse-ring {
+            position: absolute;
+            width: 32px;
+            height: 32px;
+            border: 2px solid;
+            border-radius: 50%;
+            animation: radar-pulsate 1.8s ease-out infinite;
+            opacity: 0;
+            z-index: 1;
+            transition: border-color 0.3s ease;
+        }
+
+        @keyframes radar-pulsate {
+            0% {
+                transform: scale(0.3);
+                opacity: 0.8;
+            }
+            80% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1.2);
+                opacity: 0;
+            }
+        }
     </style>
 </head>
 
@@ -292,6 +335,11 @@
 
         window.soundClasses = {};
 
+        // Active dynamic aircraft radar tracking elements
+        let activeAircraftMarker = null;
+        let activeAircraftUncertainty = null;
+        let aircraftFadeTimeout = null;
+
         // Helper to handle 24h midnight rollover for seconds past midnight
         function getSecsDifference(t1, t2) {
             let diff = Math.abs(t1 - t2);
@@ -388,129 +436,194 @@
 
         // Checks recently active detections to see if any can be triangulated with the new one
         function checkTriangulation(newDet) {
-            const nodeA = nodesData.find(n => n.dev_eui === newDet.dev_eui);
-            if (!nodeA) return;
+            const now = Date.now();
+            
+            // Filter active detections from other towers within the triangulation window
+            const coincident = activeDetections.filter(d => {
+                if (d.dev_eui === newDet.dev_eui) return false;
+                const diff = getSecsDifference(d.secs_since_midnight, newDet.secs_since_midnight);
+                return diff * 1000 <= TRIANGULATION_WINDOW_MS;
+            });
 
-            activeDetections.forEach(oldDet => {
-                // Triangulate only if they belong to different towers and occur within the configured time window
-                if (oldDet.dev_eui === newDet.dev_eui) return;
+            if (coincident.length === 0) return;
 
-                // Match exactly using the target's internal secs_since_midnight values (robust against network latency)
-                let timeDiff = Math.abs(newDet.secs_since_midnight - oldDet.secs_since_midnight);
-                if (timeDiff > 43200) {
-                    timeDiff = 86400 - timeDiff; // Correctly handle 24h midnight rollover
+            // Group active coincident towers to get the latest bearing for each EUI
+            const activeTowersMap = {};
+            activeTowersMap[newDet.dev_eui] = newDet;
+            coincident.forEach(d => {
+                if (!activeTowersMap[d.dev_eui] || d.timestamp > activeTowersMap[d.dev_eui].timestamp) {
+                    activeTowersMap[d.dev_eui] = d;
                 }
+            });
+            const towers = Object.values(activeTowersMap);
+            if (towers.length < 2) return;
 
-                if (timeDiff * 1000 > TRIANGULATION_WINDOW_MS) return;
-
-                const nodeB = nodesData.find(n => n.dev_eui === oldDet.dev_eui);
-                if (!nodeB) return;
-
-                // Create a unique key for the triangulation pair to prevent duplicate overlays
-                const pairKey = [newDet.dev_eui, newDet.timestamp, oldDet.dev_eui, oldDet.timestamp].sort().join('_');
-                if (activeTriangulations.has(pairKey)) return;
-
-                // local projection origin is average position
-                const lat_org = (nodeA.latitude + nodeB.latitude) / 2.0;
-                const lon_org = (nodeA.longitude + nodeB.longitude) / 2.0;
-
-                const posA = latLngToLocalCartesian(nodeA.latitude, nodeA.longitude, lat_org, lon_org);
-                const posB = latLngToLocalCartesian(nodeB.latitude, nodeB.longitude, lat_org, lon_org);
-
-                const azA = newDet.azimuth;
-                const azB = oldDet.azimuth;
-
-                // 1. Calculate primary intersection
-                const centralInt = getRayIntersection(posA.x, posA.y, azA, posB.x, posB.y, azB, nodeA.range, nodeB.range);
-                if (!centralInt) return; // central bearings do not cross in the forward sector within range
-
-                // 2. Calculate the four corner boundary intersections for the ±5 degree error sector
-                const azA_min = (azA - AZIMUTH_UNCERTAINTY + 360) % 360;
-                const azA_max = (azA + AZIMUTH_UNCERTAINTY) % 360;
-                const azB_min = (azB - AZIMUTH_UNCERTAINTY + 360) % 360;
-                const azB_max = (azB + AZIMUTH_UNCERTAINTY) % 360;
-
-                const P11 = getRayIntersection(posA.x, posA.y, azA_min, posB.x, posB.y, azB_min, nodeA.range, nodeB.range);
-                const P12 = getRayIntersection(posA.x, posA.y, azA_min, posB.x, posB.y, azB_max, nodeA.range, nodeB.range);
-                const P22 = getRayIntersection(posA.x, posA.y, azA_max, posB.x, posB.y, azB_max, nodeA.range, nodeB.range);
-                const P21 = getRayIntersection(posA.x, posA.y, azA_max, posB.x, posB.y, azB_min, nodeA.range, nodeB.range);
-
-                let polyCoords = [];
-                let shapeType = "quadrilateral";
-
-                if (P11 && P12 && P22 && P21) {
-                    // Draw exact convex quadrilateral region
-                    polyCoords = [
-                        localCartesianToLatLng(P11.x, P11.y, lat_org, lon_org),
-                        localCartesianToLatLng(P12.x, P12.y, lat_org, lon_org),
-                        localCartesianToLatLng(P22.x, P22.y, lat_org, lon_org),
-                        localCartesianToLatLng(P21.x, P21.y, lat_org, lon_org)
-                    ];
-                } else {
-                    // Fallback to local 15m diamond centered on central ray intersection point
-                    shapeType = "fallback-diamond";
-                    const size = 15.0; // meters
-                    polyCoords = [
-                        localCartesianToLatLng(centralInt.x - size, centralInt.y, lat_org, lon_org),
-                        localCartesianToLatLng(centralInt.x, centralInt.y + size, lat_org, lon_org),
-                        localCartesianToLatLng(centralInt.x + size, centralInt.y, lat_org, lon_org),
-                        localCartesianToLatLng(centralInt.x, centralInt.y - size, lat_org, lon_org)
-                    ];
+            // Calculate the centroid/average coordinate of these participating towers for projection origin
+            let lat_sum = 0;
+            let lon_sum = 0;
+            let valid_towers_count = 0;
+            towers.forEach(t => {
+                const node = nodesData.find(n => n.dev_eui === t.dev_eui);
+                if (node) {
+                    lat_sum += node.latitude;
+                    lon_sum += node.longitude;
+                    valid_towers_count++;
                 }
+            });
+            if (valid_towers_count === 0) return;
+            const lat_org = lat_sum / valid_towers_count;
+            const lon_org = lon_sum / valid_towers_count;
 
-                // Add to active set to avoid duplicate drawing
-                activeTriangulations.add(pairKey);
+            // Compute pairwise ray intersections in flat local projection
+            const R_earth = 6378137.0;
+            const intersections = [];
+            for (let i = 0; i < towers.length; i++) {
+                for (let j = i + 1; j < towers.length; j++) {
+                    const detA = towers[i];
+                    const detB = towers[j];
+                    const nodeA = nodesData.find(n => n.dev_eui === detA.dev_eui);
+                    const nodeB = nodesData.find(n => n.dev_eui === detB.dev_eui);
+                    if (!nodeA || !nodeB) continue;
 
-                // Render shaded uncertainty polygon
-                const uncertaintyPoly = L.polygon(polyCoords, {
-                    color: '#e64a19',     // premium amber-orange border
-                    fillColor: '#ff5722', // translucent orange fill
-                    fillOpacity: 0.25,
-                    weight: 2,
-                    dashArray: '4, 4',
-                    className: 'triangulation-polygon'
+                    const posA = latLngToLocalCartesian(nodeA.latitude, nodeA.longitude, lat_org, lon_org);
+                    const posB = latLngToLocalCartesian(nodeB.latitude, nodeB.longitude, lat_org, lon_org);
+
+                    const centralInt = getRayIntersection(posA.x, posA.y, detA.azimuth, posB.x, posB.y, detB.azimuth, nodeA.range, nodeB.range);
+                    if (centralInt) {
+                        intersections.push(centralInt);
+                    }
+                }
+            }
+
+            if (intersections.length === 0) return;
+
+            // Compute the average coordinate center of all pairwise intersections (highest probability zone)
+            let sum_x = 0;
+            let sum_y = 0;
+            intersections.forEach(pt => {
+                sum_x += pt.x;
+                sum_y += pt.y;
+            });
+            const avg_x = sum_x / intersections.length;
+            const avg_y = sum_y / intersections.length;
+
+            const centerLatLng = localCartesianToLatLng(avg_x, avg_y, lat_org, lon_org);
+
+            // Compute the max spread of intersections (uncertainty boundary radius in meters)
+            let max_spread = 20.0; // Minimum visual boundary
+            intersections.forEach(pt => {
+                const dx = pt.x - avg_x;
+                const dy = pt.y - avg_y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > max_spread) {
+                    max_spread = dist;
+                }
+            });
+
+            // Resolve sound group color for the pulse marker
+            const classInfo = window.soundClasses[newDet.type_code];
+            const gName = classInfo ? classInfo.group_name : 'Unknown';
+            const groupColor = getGroupColor(gName);
+
+            // Cancel any pending fadeout timeouts
+            if (aircraftFadeTimeout) {
+                clearTimeout(aircraftFadeTimeout);
+                aircraftFadeTimeout = null;
+            }
+
+            // Restore marker visibility in case it was actively fading out
+            if (activeAircraftMarker && activeAircraftMarker.getElement()) {
+                activeAircraftMarker.getElement().style.opacity = '1';
+            }
+
+            if (activeAircraftMarker && activeAircraftUncertainty) {
+                // Smoothly pan the aircraft to its newly triangulated center!
+                activeAircraftMarker.setLatLng(centerLatLng);
+                activeAircraftUncertainty.setLatLng(centerLatLng);
+                activeAircraftUncertainty.setRadius(max_spread);
+                activeAircraftUncertainty.setStyle({ color: groupColor, fillColor: groupColor });
+
+                // Synchronize HTML styling inside L.divIcon dynamically
+                const iconDiv = activeAircraftMarker.getElement();
+                if (iconDiv) {
+                    const dot = iconDiv.querySelector('.radar-pulse-dot');
+                    const ring = iconDiv.querySelector('.radar-pulse-ring');
+                    if (dot) {
+                        dot.style.backgroundColor = groupColor;
+                        dot.style.boxShadow = `0 0 10px ${groupColor}`;
+                    }
+                    if (ring) {
+                        ring.style.borderColor = groupColor;
+                    }
+                }
+            } else {
+                // Initialize the outer uncertainty boundary circle
+                activeAircraftUncertainty = L.circle(centerLatLng, {
+                    radius: max_spread,
+                    color: groupColor,
+                    weight: 1,
+                    dashArray: '3, 3',
+                    fillColor: groupColor,
+                    fillOpacity: 0.08,
+                    className: 'probability-blob-outer'
                 }).addTo(map);
 
-                // Bind a descriptive informative popup
-                let timeDiffSecs = Math.abs(newDet.secs_since_midnight - oldDet.secs_since_midnight);
-                if (timeDiffSecs > 43200) {
-                    timeDiffSecs = 86400 - timeDiffSecs;
-                }
-                const centerLatLng = localCartesianToLatLng(centralInt.x, centralInt.y, lat_org, lon_org);
+                // Initialize the pulsating glowing target blip
+                const innerIcon = L.divIcon({
+                    className: 'aircraft-pulse-icon',
+                    html: `
+                        <div class="radar-pulse-ring" style="border-color: ${groupColor};"></div>
+                        <div class="radar-pulse-dot" style="background-color: ${groupColor}; box-shadow: 0 0 10px ${groupColor};"></div>
+                    `,
+                    iconSize: [24, 24],
+                    iconAnchor: [12, 12]
+                });
 
-                uncertaintyPoly.bindPopup(`
-                    <div style="font-family: Arial, sans-serif; min-width: 220px; font-size: 13px;">
-                        <h4 style="margin: 0 0 8px 0; color: #d84315; border-bottom: 2px solid #ffab91; padding-bottom: 4px; font-size: 14px;">🎯 Sound Source Triangulated</h4>
-                        <b>Participating Towers:</b><br/>
-                        <span style="color: purple;">●</span> ${nodeA.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azA).toFixed(1)}°)<br/>
-                        <span style="color: purple;">●</span> ${nodeB.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azB).toFixed(1)}°)<br/>
-                        <div style="margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; font-size: 11px; color: #555;">
-                             <b>Coincidence Offset:</b> ${timeDiffSecs.toFixed(2)} seconds<br/>
-                            <b>Estimated Origin:</b> ${centerLatLng[0].toFixed(6)}, ${centerLatLng[1].toFixed(6)}<br/>
-                            <b>Geometry Mode:</b> ${shapeType}
-                        </div>
+                activeAircraftMarker = L.marker(centerLatLng, { icon: innerIcon }).addTo(map);
+            }
+
+            // Bind high-tech popup status report
+            const popupContent = `
+                <div style="font-family: 'Inter', sans-serif; min-width: 240px; font-size: 13px; color: #f8fafc; background: #0f172a; padding: 4px;">
+                    <h4 style="margin: 0 0 8px 0; color: ${groupColor}; border-bottom: 2px solid ${groupColor}; padding-bottom: 4px; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                        📡 Aircraft Radar Lock
+                    </h4>
+                    <b>Triangulated Sensors:</b> ${towers.length} towers<br/>
+                    <b>Precision Spread:</b> ±${Math.round(max_spread)} meters<br/>
+                    <b>Estimated Target:</b> ${centerLatLng[0].toFixed(6)}, ${centerLatLng[1].toFixed(6)}<br/>
+                    <div style="margin-top: 8px; border-top: 1px dashed #334155; padding-top: 6px; font-size: 11px; color: #94a3b8;">
+                        <b>Tracking Detections:</b><br/>
+                        ${towers.map(t => {
+                            const node = nodesData.find(n => n.dev_eui === t.dev_eui);
+                            return `● ${node ? node.name : t.dev_eui.substring(0,8)} (Azimuth: ${parseFloat(t.azimuth).toFixed(1)}°)`;
+                        }).join('<br/>')}
                     </div>
-                `);
+                </div>
+            `;
+            activeAircraftUncertainty.bindPopup(popupContent);
 
-                // Fade out the polygon over the remaining lifetime of the youngest detection in the pair
-                const elapsedNew = Date.now() - newDet.timestamp;
-                const elapsedOld = Date.now() - oldDet.timestamp;
-                const remainingTime = Math.max(0, FADE_OUT_TIME_MS - Math.max(elapsedNew, elapsedOld));
-
-                setTimeout(() => {
-                    let opacity = 0.25;
-                    const fadeInterval = setInterval(() => {
-                        opacity -= 0.02;
-                        if (opacity <= 0) {
-                            clearInterval(fadeInterval);
-                            map.removeLayer(uncertaintyPoly);
-                            activeTriangulations.delete(pairKey);
-                        } else {
-                            uncertaintyPoly.setStyle({ fillOpacity: opacity, opacity: opacity * 4.0 });
+            // Programmatic radar phosphor fadeout if target signal is lost
+            aircraftFadeTimeout = setTimeout(() => {
+                let opacity = 1.0;
+                const fadeInterval = setInterval(() => {
+                    opacity -= 0.05;
+                    if (opacity <= 0) {
+                        clearInterval(fadeInterval);
+                        if (activeAircraftUncertainty) map.removeLayer(activeAircraftUncertainty);
+                        if (activeAircraftMarker) map.removeLayer(activeAircraftMarker);
+                        activeAircraftUncertainty = null;
+                        activeAircraftMarker = null;
+                    } else {
+                        if (activeAircraftUncertainty) {
+                            activeAircraftUncertainty.setStyle({ fillOpacity: opacity * 0.08, opacity: opacity });
                         }
-                    }, 40);
-                }, remainingTime);
-            });
+                        if (activeAircraftMarker) {
+                            const el = activeAircraftMarker.getElement();
+                            if (el) el.style.opacity = opacity;
+                        }
+                    }
+                }, 50);
+            }, FADE_OUT_TIME_MS);
         }
 
         function drawDetection(det, ageMs = 0) {
