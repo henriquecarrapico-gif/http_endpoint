@@ -238,14 +238,26 @@
             </div>
             <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
                 <label for="fadeOutInput"
-                    style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">🧹
-                    Fade Out Lifetime</label>
+                    style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">🎯
+                    Blob Target Lifetime</label>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <input type="range" id="fadeOutInput" min="10" max="300" step="5" value="60"
+                    <input type="range" id="fadeOutInput" min="5" max="300" step="5" value="60"
                         style="flex-grow: 1; accent-color: #0288d1; cursor: pointer;"
                         oninput="updateFadeOut(this.value)">
                     <span id="fadeOutVal"
                         style="font-size: 13px; font-weight: bold; color: #0288d1; min-width: 38px; text-align: right;">60s</span>
+                </div>
+            </div>
+            <div style="padding: 12px 15px; border-bottom: 1px solid #e0e0e0; background: #fafafa;">
+                <label for="lineLifetimeInput"
+                    style="font-size: 11px; font-weight: bold; color: #555; text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 6px;">📏
+                    Detection Line Lifetime</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="range" id="lineLifetimeInput" min="1" max="120" step="1" value="10"
+                        style="flex-grow: 1; accent-color: #9c27b0; cursor: pointer;"
+                        oninput="updateLineLifetime(this.value)">
+                    <span id="lineLifetimeVal"
+                        style="font-size: 13px; font-weight: bold; color: #9c27b0; min-width: 38px; text-align: right;">10s</span>
                 </div>
             </div>
             <div class="node-list" id="nodeList">
@@ -332,6 +344,7 @@
         let AZIMUTH_UNCERTAINTY = 5.0; // Configurable ±degrees error envelope
         let TRIANGULATION_WINDOW_MS = 3000; // Configurable window in milliseconds
         let FADE_OUT_TIME_MS = 60000; // Configurable detection fadeout lifetime (default 60s)
+        let LINE_LIFETIME_MS = 10000; // Configurable detection line lifetime (default 10s)
 
         window.soundClasses = {};
 
@@ -357,7 +370,9 @@
             const seconds = parseFloat(val);
             if (!isNaN(seconds) && seconds > 0) {
                 TRIANGULATION_WINDOW_MS = seconds * 1000;
+                localStorage.setItem('triangulation_window_ms', TRIANGULATION_WINDOW_MS);
                 document.getElementById('timeWindowVal').innerText = seconds.toFixed(1) + 's';
+                document.getElementById('timeWindowInput').value = val;
                 console.log("Updated triangulation window to:", TRIANGULATION_WINDOW_MS, "ms");
             }
         }
@@ -366,19 +381,71 @@
             const degrees = parseFloat(val);
             if (!isNaN(degrees) && degrees > 0) {
                 AZIMUTH_UNCERTAINTY = degrees;
+                localStorage.setItem('azimuth_uncertainty', AZIMUTH_UNCERTAINTY);
                 document.getElementById('azimuthUncertaintyVal').innerText = '±' + degrees.toFixed(1) + '°';
+                document.getElementById('azimuthUncertaintyInput').value = val;
                 console.log("Updated azimuth uncertainty to:", AZIMUTH_UNCERTAINTY, "degrees");
             }
         }
 
         function updateFadeOut(val) {
             const seconds = parseFloat(val);
-            if (!isNaN(seconds) && seconds >= 10) {
+            if (!isNaN(seconds) && seconds >= 5) {
                 FADE_OUT_TIME_MS = seconds * 1000;
+                localStorage.setItem('fade_out_time_ms', FADE_OUT_TIME_MS);
                 document.getElementById('fadeOutVal').innerText = seconds.toFixed(0) + 's';
+                document.getElementById('fadeOutInput').value = val;
                 console.log("Updated fade out lifetime to:", FADE_OUT_TIME_MS, "ms");
             }
         }
+
+        function updateLineLifetime(val) {
+            const seconds = parseFloat(val);
+            if (!isNaN(seconds) && seconds >= 1) {
+                LINE_LIFETIME_MS = seconds * 1000;
+                localStorage.setItem('line_lifetime_ms', LINE_LIFETIME_MS);
+                document.getElementById('lineLifetimeVal').innerText = seconds.toFixed(0) + 's';
+                document.getElementById('lineLifetimeInput').value = val;
+                console.log("Updated line lifetime to:", LINE_LIFETIME_MS, "ms");
+            }
+        }
+
+        function initSettings() {
+            // Load Triangulation Window
+            const savedTimeWindow = localStorage.getItem('triangulation_window_ms');
+            if (savedTimeWindow !== null) {
+                updateTimeWindow(parseFloat(savedTimeWindow) / 1000);
+            } else {
+                updateTimeWindow(3.0);
+            }
+
+            // Load Azimuth Uncertainty
+            const savedAzimuth = localStorage.getItem('azimuth_uncertainty');
+            if (savedAzimuth !== null) {
+                updateAzimuthUncertainty(parseFloat(savedAzimuth));
+            } else {
+                updateAzimuthUncertainty(5.0);
+            }
+
+            // Load Fade Out Lifetime
+            const savedFadeOut = localStorage.getItem('fade_out_time_ms');
+            if (savedFadeOut !== null) {
+                updateFadeOut(parseFloat(savedFadeOut) / 1000);
+            } else {
+                updateFadeOut(60);
+            }
+
+            // Load Line Lifetime
+            const savedLineLifetime = localStorage.getItem('line_lifetime_ms');
+            if (savedLineLifetime !== null) {
+                updateLineLifetime(parseFloat(savedLineLifetime) / 1000);
+            } else {
+                updateLineLifetime(10);
+            }
+        }
+
+        // Initialize persisted settings
+        initSettings();
 
         // Local flat-earth Mercator coordinate conversion helpers
         function latLngToLocalCartesian(lat, lon, lat_org, lon_org) {
@@ -799,19 +866,22 @@
                 const lineOpacity = isImportantType ? 0.25 : 0.06;
                 const lineWeight = isImportantType ? 2.5 : 1.2;
 
-                const detectionLine = L.polyline([
-                    [node.latitude, node.longitude],
-                    [destLat, destLng]
-                ], {
-                    color: color,
-                    weight: lineWeight,
-                    opacity: lineOpacity
-                }).addTo(map);
+                const remainingLineTime = Math.max(0, LINE_LIFETIME_MS - ageMs);
+                if (remainingLineTime > 0) {
+                    const detectionLine = L.polyline([
+                        [node.latitude, node.longitude],
+                        [destLat, destLng]
+                    ], {
+                        color: color,
+                        weight: lineWeight,
+                        opacity: lineOpacity
+                    }).addTo(map);
 
-                // Fade out the bearing line
-                setTimeout(() => {
-                    map.removeLayer(detectionLine);
-                }, remainingTime);
+                    // Fade out the bearing line
+                    setTimeout(() => {
+                        map.removeLayer(detectionLine);
+                    }, remainingLineTime);
+                }
 
                 // Scan for and trigger cross-triangulations
                 checkTriangulation(detectionRecord);
