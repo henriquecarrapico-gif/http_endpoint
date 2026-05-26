@@ -793,11 +793,11 @@
                 const gName = classInfo ? classInfo.group_name : 'Unknown';
                 const color = getGroupColor(gName);
 
-                // Reduce the opacity and weight of the lines, except for when the typecode is 0 or 63.
+                // Reduce the opacity and weight of the lines to be very transparent so that the blob and its trail stand out.
                 const tcVal = parseInt(det.type_code);
                 const isImportantType = (tcVal === 0 || tcVal === 63);
-                const lineOpacity = isImportantType ? 0.8 : 0.25;
-                const lineWeight = isImportantType ? 4 : 2;
+                const lineOpacity = isImportantType ? 0.25 : 0.06;
+                const lineWeight = isImportantType ? 2.5 : 1.2;
 
                 const detectionLine = L.polyline([
                     [node.latitude, node.longitude],
