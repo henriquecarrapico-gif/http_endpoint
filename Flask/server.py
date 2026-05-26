@@ -384,43 +384,6 @@ def get_recent_detections():
 def get_sound_classes():
     return jsonify(sound_classes), 200
 
-@app.route("/detections/history", methods=["GET"])
-def get_historical_detections():
-    cursor, conn = None, None
-    try:
-        cursor, conn = connect_to_database()
-        if not conn or not cursor:
-            return jsonify({"status": "error", "message": "Database connection failed"}), 500
-
-        cursor.execute("""
-            SELECT dev_eui, type_code, azimuth, timestamp, node_timestamp, rssi, snr
-            FROM detections 
-            WHERE timestamp >= NOW() - INTERVAL '7 days'
-            ORDER BY timestamp DESC
-        """)
-        rows = cursor.fetchall()
-        
-        history = []
-        for row in rows:
-            history.append({
-                "dev_eui": row[0],
-                "type_code": row[1],
-                "azimuth": row[2],
-                "timestamp": row[3].isoformat() if row[3] is not None else None,
-                "secs_since_midnight": row[4],
-                "rssi": row[5],
-                "snr": row[6]
-            })
-        return jsonify(history), 200
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        app.logger.error(f"Error fetching historical detections: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
-    finally:
-        if cursor and conn:
-            close_db_connection(cursor, conn)
-
 # ---------------------------------------------------------
 # Gateway Endpoints
 # ---------------------------------------------------------

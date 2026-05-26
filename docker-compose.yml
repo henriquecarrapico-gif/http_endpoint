@@ -20,6 +20,7 @@ services:
     volumes:
       - ./Flask:/app # Mount source code for live container reload
       - /app/templates # Template rendering fallback protection
+      - ./support:/support
 
   nginx:
     image: nginx:latest

@@ -30,8 +30,8 @@
         #map-container {
             position: relative;
             width: 100vw;
-            height: calc(100vh - 220px);
-            flex-grow: 1;
+            height: 100vh;
+            display: flex;
             overflow: hidden;
         }
 
@@ -39,213 +39,6 @@
             height: 100%;
             width: 100%;
             background: #1e293b;
-        }
-
-        /* History panel styling */
-        #history-panel {
-            height: 220px;
-            width: 100vw;
-            background: #0f172a; /* very dark premium slate */
-            color: #e2e8f0;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.4);
-            z-index: 1001;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border-top: 1px solid #1e293b;
-        }
-
-        .history-header {
-            padding: 8px 16px;
-            background: #1e293b;
-            border-bottom: 1px solid #334155;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .history-title {
-            font-size: 13px;
-            font-weight: 600;
-            color: #f8fafc;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .history-count {
-            font-size: 11px;
-            background: #0f172a;
-            color: #94a3b8;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-weight: 500;
-            border: 1px solid #334155;
-        }
-
-        .history-table-wrapper {
-            flex-grow: 1;
-            overflow-y: auto;
-        }
-
-        .history-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 12px;
-            text-align: left;
-        }
-
-        .history-table th {
-            position: sticky;
-            top: 0;
-            background: #1e293b;
-            color: #94a3b8;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 10px;
-            letter-spacing: 0.05em;
-            padding: 6px 12px;
-            border-bottom: 1px solid #334155;
-            z-index: 10;
-        }
-
-        .history-table tr {
-            border-bottom: 1px solid #1e293b;
-            cursor: pointer;
-            transition: background 0.15s ease, border-left-color 0.15s ease;
-            border-left: 3px solid transparent;
-        }
-
-        .history-table tr:hover {
-            background: #1e293b;
-        }
-
-        .history-table tr.active-playback {
-            background: rgba(230, 74, 25, 0.12);
-            border-left: 3px solid #ff5722;
-        }
-
-        .history-table td {
-            padding: 8px 12px;
-            vertical-align: middle;
-            color: #cbd5e1;
-        }
-
-        /* Category Badges */
-        .sound-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 10px;
-            font-weight: 600;
-            color: #ffffff;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-        }
-
-        .badge-ordnance { background: #dc2626; } /* Crimson */
-        .badge-alarm { background: #ea580c; } /* Amber Orange */
-        .badge-human { background: #0d9488; } /* Teal */
-        .badge-music { background: #8b5cf6; } /* Purple */
-        .badge-vehicle { background: #475569; } /* Slate Grey */
-        .badge-nature { background: #16a34a; } /* Green */
-        .badge-default { background: #64748b; } /* Slate */
-
-        .time-elapsed {
-            font-size: 10px;
-            color: #64748b;
-            display: block;
-            margin-top: 1px;
-        }
-
-        .bearing-val {
-            font-family: monospace;
-            font-weight: 600;
-            color: #38bdf8;
-        }
-
-        .quality-val {
-            font-family: monospace;
-            font-size: 11px;
-            color: #94a3b8;
-            line-height: 1.3;
-        }
-
-        .quality-val strong {
-            color: #38bdf8;
-        }
-
-        /* Playback banner style */
-        #playback-banner {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%) translateY(-100px);
-            z-index: 1002;
-            background: rgba(15, 23, 42, 0.85); /* glassmorphic dark slate */
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 8px 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-            pointer-events: auto;
-            color: #f8fafc;
-            font-size: 13px;
-        }
-
-        #playback-banner.visible {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .playback-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .playback-dot {
-            width: 8px;
-            height: 8px;
-            background-color: #f59e0b;
-            border-radius: 50%;
-            box-shadow: 0 0 8px #f59e0b;
-            animation: pulse-amber 1.5s infinite;
-        }
-
-        @keyframes pulse-amber {
-            0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7); }
-            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(245, 158, 11, 0); }
-            100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-        }
-
-        .resume-live-btn {
-            background: #10b981; /* emerald green */
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 5px 12px;
-            font-weight: 600;
-            font-size: 11px;
-            cursor: pointer;
-            transition: background 0.15s ease, transform 0.1s ease;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .resume-live-btn:hover {
-            background: #059669;
-        }
-
-        .resume-live-btn:active {
-            transform: scale(0.95);
         }
 
         /* Custom map control for sidebar */
@@ -268,13 +61,6 @@
         }
 
         /* Sidebar styling */
-        #map-container {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            position: relative;
-        }
 
         #sidebar {
             position: absolute;
@@ -371,16 +157,7 @@
     <div id="map-container">
         <div id="map"></div>
         
-        <!-- Floating Playback Banner -->
-        <div id="playback-banner">
-            <div class="playback-info">
-                <span class="playback-dot"></span>
-                <span>🕒 <strong>Playback:</strong> <span id="playback-sound-name">-</span> at <span id="playback-time">-</span></span>
-            </div>
-            <button class="resume-live-btn" onclick="exitPlaybackMode()">
-                🟢 Resume Live
-            </button>
-        </div>
+
 
         <div id="sidebar">
             <div class="sidebar-header">
@@ -434,31 +211,7 @@
         </div>
     </div>
 
-    <!-- History Dock Panel -->
-    <div id="history-panel">
-        <div class="history-header">
-            <div class="history-title">
-                📋 <strong>Timeline: Unified Chronological Detections Log</strong>
-            </div>
-            <span class="history-count" id="history-count">0 detections</span>
-        </div>
-        <div class="history-table-wrapper">
-            <table class="history-table">
-                <thead>
-                    <tr>
-                        <th style="width: 130px;">Time</th>
-                        <th style="width: 180px;">Source Tower</th>
-                        <th>Detected Sound Class</th>
-                        <th style="width: 100px;">Azimuth</th>
-                        <th style="width: 160px;">Signal Quality</th>
-                    </tr>
-                </thead>
-                <tbody id="history-table-body">
-                    <!-- Historical logs dynamically loaded here -->
-                </tbody>
-            </table>
-        </div>
-    </div>
+
 
     <!-- Leaflet JS -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
@@ -517,13 +270,17 @@
         const socket = io();
 
         // Function to calculate color from green (0) to red (63)
-        function getDetectionColor(type_code) {
-            // Clamp value between 0 and 63
-            const code = Math.max(0, Math.min(63, type_code || 0));
-            const ratio = code / 63;
-            const r = Math.round(ratio * 255);
-            const g = Math.round((1 - ratio) * 255);
-            return `rgb(${r}, ${g}, 0)`;
+        // Sound group color mapper based on class_groups.csv categories
+        function getGroupColor(groupName) {
+            if (!groupName) return '#64748b'; // default slate
+            const name = groupName.toLowerCase();
+            if (name === 'ordnance') return '#dc2626'; // Crimson
+            if (name === 'alarm' || name === 'emergency_vehicle') return '#ea580c'; // Amber Orange
+            if (name === 'human') return '#0d9488'; // Teal
+            if (name === 'music') return '#8b5cf6'; // Purple
+            if (name.includes('car') || name.includes('truck') || name.includes('train') || name.includes('aircraft') || name.includes('engine') || name.includes('vehicle')) return '#475569'; // Slate Grey
+            if (name.includes('animal') || name.includes('pet') || name.includes('livestock') || name.includes('bird') || name.includes('insect') || name.includes('frog')) return '#16a34a'; // Green
+            return '#64748b'; // Default Slate
         }
 
         // Triangulation state
@@ -533,13 +290,7 @@
         let TRIANGULATION_WINDOW_MS = 3000; // Configurable window in milliseconds
         let FADE_OUT_TIME_MS = 60000; // Configurable detection fadeout lifetime (default 60s)
 
-        // Time-Travel Playback & Timeline State Variables
         window.soundClasses = {};
-        window.allDetections = [];
-        let isPlaybackMode = false;
-        window.selectedPlaybackDet = null;
-        const liveTransientLayers = [];
-        const playbackLayers = [];
 
         // Helper to handle 24h midnight rollover for seconds past midnight
         function getSecsDifference(t1, t2) {
@@ -548,35 +299,6 @@
                 diff = 86400 - diff;
             }
             return diff;
-        }
-
-        // Relative time formatting helper
-        function getRelativeTimeString(isoStr) {
-            if (!isoStr) return '';
-            const past = new Date(isoStr);
-            const now = new Date();
-            const diffMs = now - past;
-            const diffSecs = Math.floor(diffMs / 1000);
-            if (diffSecs < 60) return 'Just now';
-            const diffMins = Math.floor(diffSecs / 60);
-            if (diffMins < 60) return `${diffMins}m ago`;
-            const diffHours = Math.floor(diffMins / 60);
-            if (diffHours < 24) return `${diffHours}h ago`;
-            const diffDays = Math.floor(diffHours / 24);
-            return `${diffDays}d ago`;
-        }
-
-        // Map sound group names to specific CSS class colors
-        function getGroupBadgeClass(groupName) {
-            if (!groupName) return 'badge-default';
-            const name = groupName.toLowerCase();
-            if (name === 'ordnance') return 'badge-ordnance';
-            if (name === 'alarm' || name === 'emergency_vehicle') return 'badge-alarm';
-            if (name === 'human') return 'badge-human';
-            if (name === 'music') return 'badge-music';
-            if (name.includes('car') || name.includes('truck') || name.includes('train') || name.includes('aircraft') || name.includes('engine') || name.includes('vehicle')) return 'badge-vehicle';
-            if (name.includes('animal') || name.includes('pet') || name.includes('livestock') || name.includes('bird') || name.includes('insect') || name.includes('frog')) return 'badge-nature';
-            return 'badge-default';
         }
 
         function updateTimeWindow(val) {
@@ -749,9 +471,6 @@
                     className: 'triangulation-polygon'
                 }).addTo(map);
 
-                // Track layer so we can clear it instantly on playback mode entry
-                liveTransientLayers.push(uncertaintyPoly);
-
                 // Bind a descriptive informative popup
                 let timeDiffSecs = Math.abs(newDet.secs_since_midnight - oldDet.secs_since_midnight);
                 if (timeDiffSecs > 43200) {
@@ -785,8 +504,6 @@
                         if (opacity <= 0) {
                             clearInterval(fadeInterval);
                             map.removeLayer(uncertaintyPoly);
-                            const idx = liveTransientLayers.indexOf(uncertaintyPoly);
-                            if (idx !== -1) liveTransientLayers.splice(idx, 1);
                             activeTriangulations.delete(pairKey);
                         } else {
                             uncertaintyPoly.setStyle({ fillOpacity: opacity, opacity: opacity * 4.0 });
@@ -805,33 +522,6 @@
                 // Fallback to browser local seconds since midnight if not provided
                 const d = new Date(now - ageMs);
                 secsSinceMidnight = d.getHours() * 3600 + d.getMinutes() * 60 + d.getSeconds() + d.getMilliseconds() / 1000;
-            }
-
-            // Always capture detection into the 7-day memory log
-            const timestampVal = det.timestamp || new Date(now - ageMs).toISOString();
-            const exists = window.allDetections.some(d => d.dev_eui === det.dev_eui && getSecsDifference(d.secs_since_midnight, secsSinceMidnight) < 0.1);
-            if (!exists) {
-                const newDetObj = {
-                    id: det.id || null,
-                    dev_eui: det.dev_eui,
-                    type_code: det.type_code,
-                    azimuth: parseFloat(det.azimuth),
-                    secs_since_midnight: parseFloat(secsSinceMidnight),
-                    timestamp: timestampVal,
-                    rssi: det.rssi !== undefined ? det.rssi : null,
-                    snr: det.snr !== undefined ? det.snr : null
-                };
-                window.allDetections.unshift(newDetObj); // prepend new detection
-                
-                // Redraw table immediately if the user is not actively traveling in time
-                if (!isPlaybackMode) {
-                    renderHistoryTable();
-                }
-            }
-
-            // If in playback time-travel mode, freeze drawing of new real-time lines/polygons
-            if (isPlaybackMode) {
-                return;
             }
 
             const node = nodesData.find(n => n.dev_eui === det.dev_eui);
@@ -869,7 +559,10 @@
                 const destLat = lat2 * 180 / Math.PI;
                 const destLng = lon2 * 180 / Math.PI;
 
-                const color = getDetectionColor(det.type_code);
+                // Look up group name in soundClasses to determine the color
+                const classInfo = window.soundClasses[det.type_code];
+                const gName = classInfo ? classInfo.group_name : 'Unknown';
+                const color = getGroupColor(gName);
 
                 // Reduce the opacity and weight of the lines, except for when the typecode is 0 or 63.
                 const tcVal = parseInt(det.type_code);
@@ -886,300 +579,17 @@
                     opacity: lineOpacity
                 }).addTo(map);
 
-                // Track layer so we can clear it instantly on playback mode entry
-                liveTransientLayers.push(detectionLine);
-
                 // Fade out the bearing line
                 setTimeout(() => {
                     map.removeLayer(detectionLine);
-                    const idx = liveTransientLayers.indexOf(detectionLine);
-                    if (idx !== -1) liveTransientLayers.splice(idx, 1);
                 }, remainingTime);
 
-                // 2. Scan for and trigger cross-triangulations
+                // Scan for and trigger cross-triangulations
                 checkTriangulation(detectionRecord);
             }
         }
 
-        // --- History Log & Time Playback Engine implementation ---
 
-        function initHistorySystem() {
-            // Load CSV sound mappings first, then fetch 7-day database detections
-            fetch('/api/sound_classes')
-                .then(response => response.json())
-                .then(classes => {
-                    window.soundClasses = classes;
-                    console.log("Loaded CSV classes: ", Object.keys(window.soundClasses).length);
-                    
-                    // Fetch detections
-                    fetch('/detections/history')
-                        .then(res => res.json())
-                        .then(history => {
-                            if (Array.isArray(history)) {
-                                window.allDetections = history;
-                                renderHistoryTable();
-                            }
-                        })
-                        .catch(err => console.error("Error fetching history detections:", err));
-                })
-                .catch(err => console.error("Error fetching sound classes mapping:", err));
-        }
-
-        function renderHistoryTable() {
-            const tbody = document.getElementById('history-table-body');
-            const countSpan = document.getElementById('history-count');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
-            countSpan.innerText = `${window.allDetections.length} detections`;
-
-            window.allDetections.forEach(det => {
-                const tr = document.createElement('tr');
-                const rowId = `history-row-${det.id || det.timestamp + '_' + det.dev_eui}`;
-                tr.id = rowId;
-
-                if (isPlaybackMode && window.selectedPlaybackDet && 
-                    window.selectedPlaybackDet.dev_eui === det.dev_eui && 
-                    getSecsDifference(window.selectedPlaybackDet.secs_since_midnight, det.secs_since_midnight) < 0.1) {
-                    tr.classList.add('active-playback');
-                }
-
-                // Node lookup
-                const node = nodesData.find(n => n.dev_eui === det.dev_eui);
-                const towerName = node ? (node.name || 'Unnamed Tower') : `Node ${det.dev_eui.substring(0, 8)}`;
-
-                // Sound lookup
-                const classInfo = window.soundClasses[det.type_code];
-                const gName = classInfo ? classInfo.group_name : 'Unknown';
-                const dName = classInfo ? classInfo.display_name : `Sound Code ${det.type_code}`;
-
-                // Time parsing
-                const dt = new Date(det.timestamp);
-                const absTime = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                const relTime = getRelativeTimeString(det.timestamp);
-
-                tr.innerHTML = `
-                    <td>
-                        <strong>${absTime}</strong>
-                        <span class="time-elapsed">${relTime}</span>
-                    </td>
-                    <td>
-                        <span style="color: #c084fc; font-weight: 600;">🗼 ${towerName}</span>
-                    </td>
-                    <td>
-                        <span class="sound-badge ${getGroupBadgeClass(gName)}">${gName}</span>
-                        <span style="margin-left: 8px; font-weight: 500; color: #f1f5f9;">${dName}</span>
-                    </td>
-                    <td>
-                        <span class="bearing-val">🧭 ${parseFloat(det.azimuth).toFixed(1)}°</span>
-                    </td>
-                    <td>
-                        <div class="quality-val">
-                            RSSI: <strong>${det.rssi !== null ? det.rssi + ' dBm' : 'N/A'}</strong><br/>
-                            SNR: <strong>${det.snr !== null ? det.snr.toFixed(1) + ' dB' : 'N/A'}</strong>
-                        </div>
-                    </td>
-                `;
-
-                tr.onclick = function() {
-                    enterPlaybackMode(det);
-                };
-
-                tbody.appendChild(tr);
-            });
-        }
-
-        function enterPlaybackMode(targetDet) {
-            isPlaybackMode = true;
-            window.selectedPlaybackDet = targetDet;
-
-            // Highlight the clicked row, clear others
-            const rows = document.querySelectorAll('.history-table tbody tr');
-            rows.forEach(r => r.classList.remove('active-playback'));
-            const targetRow = document.getElementById(`history-row-${targetDet.id || targetDet.timestamp + '_' + targetDet.dev_eui}`);
-            if (targetRow) {
-                targetRow.classList.add('active-playback');
-                targetRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-
-            // 1. Clear any transient live layers from map
-            liveTransientLayers.forEach(layer => map.removeLayer(layer));
-            liveTransientLayers.length = 0;
-
-            // 2. Clear any prior playback layers
-            playbackLayers.forEach(layer => map.removeLayer(layer));
-            playbackLayers.length = 0;
-
-            // 3. Find coincident detections in the triangulation window
-            const matchedInWindow = window.allDetections.filter(det => {
-                return getSecsDifference(det.secs_since_midnight, targetDet.secs_since_midnight) * 1000 <= TRIANGULATION_WINDOW_MS;
-            });
-
-            // Group by dev_eui, keeping the one closest in time
-            const groupedByTower = {};
-            matchedInWindow.forEach(det => {
-                const diff = getSecsDifference(det.secs_since_midnight, targetDet.secs_since_midnight);
-                if (!groupedByTower[det.dev_eui] || diff < groupedByTower[det.dev_eui].diff) {
-                    groupedByTower[det.dev_eui] = { det, diff };
-                }
-            });
-
-            const activeMatched = Object.values(groupedByTower).map(item => item.det);
-
-            // 4. Render matched bearing lines
-            activeMatched.forEach(det => {
-                const node = nodesData.find(n => n.dev_eui === det.dev_eui);
-                if (!node) return;
-
-                const radiusEarth = 6378137;
-                const distance = parseFloat(node.range || 5000);
-                const brng = det.azimuth * Math.PI / 180;
-                const lat1 = node.latitude * Math.PI / 180;
-                const lon1 = node.longitude * Math.PI / 180;
-
-                const lat2 = Math.asin(Math.sin(lat1) * Math.cos(distance / radiusEarth) +
-                    Math.cos(lat1) * Math.sin(distance / radiusEarth) * Math.cos(brng));
-                const lon2 = lon1 + Math.atan2(Math.sin(brng) * Math.sin(distance / radiusEarth) * Math.cos(lat1),
-                    Math.cos(distance / radiusEarth) - Math.sin(lat1) * Math.sin(lat2));
-
-                const destLat = lat2 * 180 / Math.PI;
-                const destLng = lon2 * 180 / Math.PI;
-
-                const color = getDetectionColor(det.type_code);
-                const isTarget = (det.dev_eui === targetDet.dev_eui && getSecsDifference(det.secs_since_midnight, targetDet.secs_since_midnight) < 0.1);
-                
-                const line = L.polyline([
-                    [node.latitude, node.longitude],
-                    [destLat, destLng]
-                ], {
-                    color: color,
-                    weight: isTarget ? 4 : 2,
-                    opacity: 0.8,
-                    dashArray: isTarget ? null : '5, 5'
-                }).addTo(map);
-
-                playbackLayers.push(line);
-            });
-
-            // 5. Calculate and draw cross-triangulation polygons for all coincident towers
-            for (let i = 0; i < activeMatched.length; i++) {
-                for (let j = i + 1; j < activeMatched.length; j++) {
-                    const detA = activeMatched[i];
-                    const detB = activeMatched[j];
-
-                    const nodeA = nodesData.find(n => n.dev_eui === detA.dev_eui);
-                    const nodeB = nodesData.find(n => n.dev_eui === detB.dev_eui);
-                    if (!nodeA || !nodeB) continue;
-
-                    const lat_org = (nodeA.latitude + nodeB.latitude) / 2.0;
-                    const lon_org = (nodeA.longitude + nodeB.longitude) / 2.0;
-
-                    const posA = latLngToLocalCartesian(nodeA.latitude, nodeA.longitude, lat_org, lon_org);
-                    const posB = latLngToLocalCartesian(nodeB.latitude, nodeB.longitude, lat_org, lon_org);
-
-                    const azA = detA.azimuth;
-                    const azB = detB.azimuth;
-
-                    const centralInt = getRayIntersection(posA.x, posA.y, azA, posB.x, posB.y, azB, nodeA.range, nodeB.range);
-                    if (!centralInt) continue;
-
-                    const azA_min = (azA - AZIMUTH_UNCERTAINTY + 360) % 360;
-                    const azA_max = (azA + AZIMUTH_UNCERTAINTY) % 360;
-                    const azB_min = (azB - AZIMUTH_UNCERTAINTY + 360) % 360;
-                    const azB_max = (azB + AZIMUTH_UNCERTAINTY) % 360;
-
-                    const P11 = getRayIntersection(posA.x, posA.y, azA_min, posB.x, posB.y, azB_min, nodeA.range, nodeB.range);
-                    const P12 = getRayIntersection(posA.x, posA.y, azA_min, posB.x, posB.y, azB_max, nodeA.range, nodeB.range);
-                    const P22 = getRayIntersection(posA.x, posA.y, azA_max, posB.x, posB.y, azB_max, nodeA.range, nodeB.range);
-                    const P21 = getRayIntersection(posA.x, posA.y, azA_max, posB.x, posB.y, azB_min, nodeA.range, nodeB.range);
-
-                    let polyCoords = [];
-                    let shapeType = "quadrilateral";
-
-                    if (P11 && P12 && P22 && P21) {
-                        polyCoords = [
-                            localCartesianToLatLng(P11.x, P11.y, lat_org, lon_org),
-                            localCartesianToLatLng(P12.x, P12.y, lat_org, lon_org),
-                            localCartesianToLatLng(P22.x, P22.y, lat_org, lon_org),
-                            localCartesianToLatLng(P21.x, P21.y, lat_org, lon_org)
-                        ];
-                    } else {
-                        shapeType = "fallback-diamond";
-                        const size = 15.0;
-                        polyCoords = [
-                            localCartesianToLatLng(centralInt.x - size, centralInt.y, lat_org, lon_org),
-                            localCartesianToLatLng(centralInt.x, centralInt.y + size, lat_org, lon_org),
-                            localCartesianToLatLng(centralInt.x + size, centralInt.y, lat_org, lon_org),
-                            localCartesianToLatLng(centralInt.x, centralInt.y - size, lat_org, lon_org)
-                        ];
-                    }
-
-                    const uncertaintyPoly = L.polygon(polyCoords, {
-                        color: '#e64a19',
-                        fillColor: '#ff5722',
-                        fillOpacity: 0.35,
-                        weight: 2,
-                        dashArray: '4, 4'
-                    }).addTo(map);
-
-                    playbackLayers.push(uncertaintyPoly);
-
-                    let timeDiffSecs = getSecsDifference(detA.secs_since_midnight, detB.secs_since_midnight);
-                    const centerLatLng = localCartesianToLatLng(centralInt.x, centralInt.y, lat_org, lon_org);
-
-                    uncertaintyPoly.bindPopup(`
-                        <div style="font-family: Arial, sans-serif; min-width: 220px; font-size: 13px;">
-                            <h4 style="margin: 0 0 8px 0; color: #d84315; border-bottom: 2px solid #ffab91; padding-bottom: 4px; font-size: 14px;">🎯 Historical Source Triangulated</h4>
-                            <b>Participating Towers:</b><br/>
-                            <span style="color: purple;">●</span> ${nodeA.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azA).toFixed(1)}°)<br/>
-                            <span style="color: purple;">●</span> ${nodeB.name || 'Unnamed Tower'} (Azimuth: ${parseFloat(azB).toFixed(1)}°)<br/>
-                            <div style="margin-top: 8px; border-top: 1px dashed #ccc; padding-top: 6px; font-size: 11px; color: #555;">
-                                <b>Coincidence Offset:</b> ${timeDiffSecs.toFixed(2)} seconds<br/>
-                                <b>Estimated Origin:</b> ${centerLatLng[0].toFixed(6)}, ${centerLatLng[1].toFixed(6)}<br/>
-                                <b>Geometry Mode:</b> ${shapeType}
-                            </div>
-                        </div>
-                    `);
-                }
-            }
-
-            // 6. Update and show the Playback Banner
-            const classInfo = window.soundClasses[targetDet.type_code];
-            const dName = classInfo ? classInfo.display_name : `Sound Code ${targetDet.type_code}`;
-            const dt = new Date(targetDet.timestamp);
-            const absTime = dt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            document.getElementById('playback-sound-name').innerText = dName;
-            document.getElementById('playback-time').innerText = absTime;
-            document.getElementById('playback-banner').classList.add('visible');
-
-            // Fly or Pan to the detecting node
-            const firstNode = nodesData.find(n => n.dev_eui === targetDet.dev_eui);
-            if (firstNode) {
-                map.panTo([firstNode.latitude, firstNode.longitude]);
-            }
-        }
-
-        window.exitPlaybackMode = function() {
-            isPlaybackMode = false;
-            window.selectedPlaybackDet = null;
-
-            // Hide Playback banner
-            document.getElementById('playback-banner').classList.remove('visible');
-
-            // Clear playback layers from map
-            playbackLayers.forEach(layer => map.removeLayer(layer));
-            playbackLayers.length = 0;
-
-            // Clear selected row highlight
-            const rows = document.querySelectorAll('.history-table tbody tr');
-            rows.forEach(r => r.classList.remove('active-playback'));
-
-            // Refresh chronological table view
-            renderHistoryTable();
-
-            console.log("Resumed normal live monitoring mode.");
-        };
 
         // Websocket trigger
         socket.on('new_detections', function (detections) {
@@ -1533,12 +943,23 @@
         let fetchedNodes = false;
         let fetchedGateways = false;
 
+        function initSoundClasses() {
+            return fetch('/api/sound_classes')
+                .then(response => response.json())
+                .then(classes => {
+                    window.soundClasses = classes;
+                    console.log("Loaded CSV classes: ", Object.keys(window.soundClasses).length);
+                })
+                .catch(err => console.error("Error fetching sound classes mapping:", err));
+        }
+
         function checkRenderSidebar() {
             if (fetchedNodes && fetchedGateways) {
                 renderSidebar();
                 drawConnections();
-                fetchRecentDetections();
-                initHistorySystem();
+                initSoundClasses().then(() => {
+                    fetchRecentDetections();
+                });
             }
         }
 
