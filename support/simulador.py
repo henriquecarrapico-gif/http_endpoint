@@ -29,7 +29,7 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
     lat2_rad = math.radians(lat2)
     d_lon = math.radians(lon2 - lon1)
     y = math.sin(d_lon) * math.cos(lat2_rad)
-    x = math.cos(lat1_rad) * math.sin(lat2_rad) - math.sin(lat1_rad) * math.cos(d_lon)
+    x = math.cos(lat1_rad) * math.sin(lat2_rad) - math.sin(lat1_rad) * math.cos(lat2_rad) * math.cos(d_lon)
     bearing = math.atan2(y, x)
     return (math.degrees(bearing) + 360) % 360
 
@@ -265,31 +265,45 @@ def main():
 
         # Calculate target position
         if len(simulated_nodes) >= 2:
-            # Figure-8 Lemniscate sweep between the first two towers
-            node_A = simulated_nodes[0]
-            node_B = simulated_nodes[1]
-            lat_A, lon_A = node_A["latitude"], node_A["longitude"]
-            lat_B, lon_B = node_B["latitude"], node_B["longitude"]
+            # 1. Centroid of all towers
+            lat_mid = sum(n["latitude"] for n in simulated_nodes) / len(simulated_nodes)
+            lon_mid = sum(n["longitude"] for n in simulated_nodes) / len(simulated_nodes)
             
-            lat_mid = (lat_A + lat_B) / 2.0
-            lon_mid = (lon_A + lon_B) / 2.0
-            
-            dy = (lat_B - lat_A) * math.pi / 180.0 * R
-            dx = (lon_B - lon_A) * math.pi / 180.0 * R * math.cos(lat_mid * math.pi / 180.0)
-            D = math.sqrt(dx**2 + dy**2)
-            
-            if D < 1e-3:
-                D = 100.0
-                dx = 100.0
-                dy = 0.0
+            # 2. Find the tower furthest from the centroid to define our sweep axis and scale
+            furthest_node = simulated_nodes[0]
+            max_d = 0.0
+            for node in simulated_nodes:
+                dy = (node["latitude"] - lat_mid) * math.pi / 180.0 * R
+                dx = (node["longitude"] - lon_mid) * math.pi / 180.0 * R * math.cos(lat_mid * math.pi / 180.0)
+                dist = math.sqrt(dx**2 + dy**2)
+                if dist > max_d:
+                    max_d = dist
+                    furthest_node = node
+                    
+            if max_d < 1e-3:
+                max_d = 150.0  # Fallback radius if all nodes are on top of each other
                 
-            A = D * 0.75  # sweep amplitude
+            # Vector from midpoint to furthest tower defines the orientation of our Figure-8
+            dy_axis = (furthest_node["latitude"] - lat_mid) * math.pi / 180.0 * R
+            dx_axis = (furthest_node["longitude"] - lon_mid) * math.pi / 180.0 * R * math.cos(lat_mid * math.pi / 180.0)
+            D_axis = math.sqrt(dx_axis**2 + dy_axis**2)
             
-            ex = dx / D
-            ey = dy / D
+            if D_axis < 1e-3:
+                ex = 1.0
+                ey = 0.0
+            else:
+                ex = dx_axis / D_axis
+                ey = dy_axis / D_axis
+                
             px = -ey
             py = ex
             
+            # 3. Dynamic amplitude: 1.5x the max distance from the midpoint (so it sweeps between and around all towers)
+            # but capped at 90% of average tower range so the target doesn't wander off the map completely
+            avg_range = sum(n.get("range", 5000.0) for n in simulated_nodes) / len(simulated_nodes)
+            A = min(max_d * 1.5, avg_range * 0.9)
+            
+            # Lemniscate of Bernoulli formulas
             sin_t = math.sin(t)
             cos_t = math.cos(t)
             denom = 1.0 + sin_t**2
@@ -303,7 +317,7 @@ def main():
             lat_t = lat_mid + y_offset / R * 180.0 / math.pi
             lon_t = lon_mid + x_offset / (R * math.cos(lat_mid * math.pi / 180.0)) * 180.0 / math.pi
         else:
-            # Single tower orbit
+            # Single tower orbit fallback
             node_A = simulated_nodes[0]
             lat_mid, lon_mid = node_A["latitude"], node_A["longitude"]
             orbit_radius = 150.0
