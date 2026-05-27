@@ -291,8 +291,8 @@ def uplink():
         class_id = det.get("class_id")
         azimuth = det.get("azimuth")
         
-        # Skip detections with missing azimuth to prevent database insert errors
-        if azimuth is None:
+        # Skip detections with missing required fields to prevent database insert errors
+        if class_id is None or azimuth is None:
             continue
             
         node_time = det.get("node_time")
