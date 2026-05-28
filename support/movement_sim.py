@@ -46,6 +46,7 @@ BATCHES_PER_PASS    = 12        # batches per pass (= 60s at 5s intervals)
 # Cooldown between passes (seconds) — random within this range
 PASS_COOLDOWN_MIN   = 2.0
 PASS_COOLDOWN_MAX   = 8.0
+MAX_SILENT_BATCHES  = 2         # abort pass if BOTH towers see nothing for this many consecutive batches
 
 # Speed range (m/s) for random target — roughly 100–400 km/h
 SPEED_MIN = 28
@@ -131,15 +132,35 @@ def run_pass(pass_num, t1, t2, base_url, num_batches):
     """Simulate one linear target movement across two towers."""
 
     speed = random.uniform(SPEED_MIN, SPEED_MAX)
-    heading = random.uniform(0, 360)
 
-    # Place start position within range of a randomly chosen tower
-    anchor = random.choice([t1, t2])
-    start_bearing = random.uniform(0, 360)
-    start_dist = random.uniform(0, float(anchor["range"]) * 0.85)
-    start_lat, start_lon = destination_point(
-        anchor["latitude"], anchor["longitude"], start_bearing, start_dist
-    )
+    # ── Build a trajectory that crosses through BOTH towers' ranges ──
+    # Strategy: compute the midpoint between the two towers, then create
+    # a path that sweeps roughly perpendicular to the tower-to-tower line
+    # so it passes through the overlap zone.
+    mid_lat = (t1["latitude"] + t2["latitude"]) / 2
+    mid_lon = (t1["longitude"] + t2["longitude"]) / 2
+
+    # Bearing from T1 to T2
+    t1_to_t2_bearing = bearing_deg(t1["latitude"], t1["longitude"],
+                                   t2["latitude"], t2["longitude"])
+
+    # Pick a heading roughly perpendicular to the T1-T2 axis (+/-30 deg jitter)
+    perp = t1_to_t2_bearing + 90 + random.uniform(-30, 30)
+    heading = perp % 360
+
+    # How far away from the midpoint to start (so the target enters, crosses,
+    # and exits both ranges).  Use the larger tower range as reference.
+    max_range = max(float(t1["range"]), float(t2["range"]))
+    approach_dist = max_range * random.uniform(0.8, 1.3)
+
+    # Also offset slightly along the T1-T2 axis so paths aren't always dead-centre
+    lateral_offset = random.uniform(-max_range * 0.3, max_range * 0.3)
+    offset_lat, offset_lon = destination_point(mid_lat, mid_lon,
+                                               t1_to_t2_bearing, lateral_offset)
+
+    # Start point: approach_dist metres BEHIND the midpoint (opposite of heading)
+    start_lat, start_lon = destination_point(offset_lat, offset_lon,
+                                             (heading + 180) % 360, approach_dist)
 
     total_time = num_batches * BATCH_INTERVAL_S
     total_dist = speed * total_time
@@ -153,7 +174,7 @@ def run_pass(pass_num, t1, t2, base_url, num_batches):
     print(f"  PASS #{pass_num}")
     print(f"{'='*70}")
     print(f"  Heading : {heading:.1f} deg   Speed: {speed:.1f} m/s ({speed * 3.6:.0f} km/h)")
-    print(f"  Duration: {total_time:.0f}s ({num_batches} batches)")
+    print(f"  Duration: {total_time:.0f}s max ({num_batches} batches)")
     print(f"  Start   : ({start_lat:.6f}, {start_lon:.6f})")
     print(f"  End     : ({end_lat:.6f}, {end_lon:.6f})")
     print(f"  Classes : A={pool_a}  B={pool_b}")
@@ -162,6 +183,7 @@ def run_pass(pass_num, t1, t2, base_url, num_batches):
     name_a = t1['name'] or t1['dev_eui'][:8]
     name_b = t2['name'] or t2['dev_eui'][:8]
     sim_start = time.time()
+    consecutive_silent = 0       # batches where BOTH towers had 0 detections
 
     for batch_idx in range(num_batches):
         batch_wall_start = time.time()
@@ -202,6 +224,12 @@ def run_pass(pass_num, t1, t2, base_url, num_batches):
                     "node_time": node_time,
                 })
 
+        # Track consecutive silent batches (both towers empty)
+        if len(dets_a) == 0 and len(dets_b) == 0:
+            consecutive_silent += 1
+        else:
+            consecutive_silent = 0
+
         # Send batches with random timing offset between towers
         offset = random.uniform(0, TOWER_TIMING_JITTER)
         send_a_first = random.choice([True, False])
@@ -226,6 +254,11 @@ def run_pass(pass_num, t1, t2, base_url, num_batches):
             if offset > 0:
                 time.sleep(offset)
             send_batch(t1, dets_a, f"A ({name_a})")
+
+        # Abort early if out of range for too long
+        if consecutive_silent >= MAX_SILENT_BATCHES:
+            print(f"\n  Pass #{pass_num} aborted - both towers silent for {consecutive_silent} consecutive batches")
+            return
 
         # Pace to real-time
         batch_elapsed = time.time() - batch_wall_start
