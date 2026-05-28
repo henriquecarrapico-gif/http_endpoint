@@ -330,9 +330,12 @@ def uplink():
                 UPDATE nodes
                 SET health_status = %s, last_health_check = NOW()
                 WHERE dev_eui = %s
+                RETURNING last_health_check
                 """,
                 (health_update, dev_eui)
             )
+            health_check_row = cursor.fetchone()
+            health_check_time = health_check_row[0].isoformat() if health_check_row else None
         
         conn.commit()
         
@@ -356,7 +359,8 @@ def uplink():
         if health_update and dev_eui:
             socketio.emit('node_health', {
                 'dev_eui': dev_eui,
-                'health_status': health_update
+                'health_status': health_update,
+                'last_health_check': health_check_time
             });
     except psycopg2.Error as e:
         if conn:

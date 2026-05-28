@@ -1015,7 +1015,7 @@
             const node = nodesData.find(n => n.dev_eui === data.dev_eui);
             if (node) {
                 node.health_status = data.health_status;
-                node.last_health_check = new Date().toISOString();
+                node.last_health_check = data.last_health_check || new Date().toISOString();
                 drawNode(node); // Redraw the node marker with the updated health color
                 renderSidebar();
             }
@@ -1023,6 +1023,49 @@
 
         // Configure the map to render horizontally continuously
         //map.options.worldCopyJump = true;
+
+        // Health staleness threshold in milliseconds (15 minutes)
+        const HEALTH_STALE_THRESHOLD_MS = 15 * 60 * 1000;
+
+        // Compute the effective health color for a node's range circle.
+        // Green = OK and checked within the last 15 min
+        // Red   = Error and checked within the last 15 min
+        // Yellow = No health data, or last check older than 15 min (stale)
+        function getNodeHealthColor(node) {
+            if (!node.last_health_check) return '#eab308'; // yellow – never checked
+
+            const ageMs = Date.now() - new Date(node.last_health_check).getTime();
+            if (ageMs > HEALTH_STALE_THRESHOLD_MS) return '#eab308'; // yellow – stale
+
+            if (node.health_status === 'ok') return '#22c55e';    // green
+            if (node.health_status === 'error') return '#ef4444'; // red
+            return '#eab308'; // yellow – unknown status
+        }
+
+        // Human-readable label for health
+        function getNodeHealthLabel(node) {
+            if (!node.last_health_check) return '⚠️ Never checked';
+
+            const ageMs = Date.now() - new Date(node.last_health_check).getTime();
+            const agoText = formatAgo(ageMs);
+
+            if (ageMs > HEALTH_STALE_THRESHOLD_MS) {
+                return `⚠️ Stale (last: ${agoText} ago)`;
+            }
+            if (node.health_status === 'ok') return `✅ Healthy (${agoText} ago)`;
+            if (node.health_status === 'error') return `❌ Mic Error (${agoText} ago)`;
+            return `⚠️ Unknown (${agoText} ago)`;
+        }
+
+        function formatAgo(ms) {
+            const seconds = Math.floor(ms / 1000);
+            if (seconds < 60) return `${seconds}s`;
+            const minutes = Math.floor(seconds / 60);
+            if (minutes < 60) return `${minutes}m`;
+            const hours = Math.floor(minutes / 60);
+            const remMin = minutes % 60;
+            return `${hours}h ${remMin}m`;
+        }
 
         // Function to draw a node on the map
         function drawNode(node) {
@@ -1034,21 +1077,18 @@
                 }
             }
 
-            // Determine node dot color based on health status
-            const healthColor = node.health_status === 'ok' ? '#22c55e'
-                : node.health_status === 'error' ? '#ef4444'
-                    : '#9ca3af'; // gray for unknown
+            // Determine colors based on health freshness
+            const rangeColor = getNodeHealthColor(node);
+            const healthLabel = getNodeHealthLabel(node);
 
+            // Node dot uses the same color as the range circle
             const nodeIcon = L.divIcon({
                 className: 'custom-node-icon',
-                html: `<div style="background-color:${healthColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>`,
+                html: `<div style="background-color:${rangeColor}; width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow: 0 0 6px ${rangeColor};"></div>`,
                 iconSize: [16, 16],
                 iconAnchor: [8, 8]
             });
 
-            const healthLabel = node.health_status === 'ok' ? 'Healthy'
-                : node.health_status === 'error' ? 'Mic Error'
-                    : 'Unknown';
             const lastCheck = node.last_health_check ? new Date(node.last_health_check).toLocaleString() : 'Never';
 
             const marker = L.marker([node.latitude, node.longitude], {
@@ -1063,10 +1103,13 @@
                 });
             }
 
+            // Range circle color reflects health freshness
             const circle = L.circle([node.latitude, node.longitude], {
-                color: 'yellow',
-                fillColor: 'yellow',
-                fillOpacity: 0.3,
+                color: rangeColor,
+                fillColor: rangeColor,
+                fillOpacity: 0.15,
+                weight: 2,
+                opacity: 0.6,
                 radius: parseFloat(node.range)
             }).addTo(map);
 
@@ -1104,6 +1147,24 @@
             nodeObjects[node.dev_eui] = { marker, circle, tooltip, is_hidden: false };
             drawConnections(); // Redraw connections when a node is drawn/updated
         }
+
+        // Periodically re-evaluate node health staleness every 30 seconds.
+        // Nodes that were green/red will transition to yellow once their
+        // last_health_check exceeds the 15-minute threshold.
+        setInterval(() => {
+            nodesData.forEach(node => {
+                const obj = nodeObjects[node.dev_eui];
+                if (!obj || obj.is_hidden) return;
+
+                const currentColor = getNodeHealthColor(node);
+                const circleColor = obj.circle.options.color;
+
+                // Only redraw if the color actually changed
+                if (circleColor !== currentColor) {
+                    drawNode(node);
+                }
+            });
+        }, 30000);
 
         // Function to draw a gateway on the map
         function drawGateway(gw) {
@@ -1242,11 +1303,13 @@
             nodesData.forEach(node => {
                 const isHidden = nodeObjects[node.dev_eui]?.is_hidden;
                 const connectedTo = node.connected_gateway ? `Connected: ${node.connected_gateway.substring(0, 8)}...` : 'Disconnected';
+                const healthColor = getNodeHealthColor(node);
+                const healthLabel = getNodeHealthLabel(node);
                 const item = document.createElement('div');
                 item.className = 'node-item';
                 item.innerHTML = `
-                <h4><span style="color:purple;">●</span> ${node.name || 'Unnamed Node'}</h4>
-                <div style="font-size: 11px; color: #666;">EUI: ${node.dev_eui}<br/>${connectedTo}</div>
+                <h4><span style="color:${healthColor}; text-shadow: 0 0 4px ${healthColor};">●</span> ${node.name || 'Unnamed Node'}</h4>
+                <div style="font-size: 11px; color: #666;">EUI: ${node.dev_eui}<br/>${connectedTo}<br/>${healthLabel}</div>
                 <div class="node-actions">
                     <button class="action-btn" onclick="centerOnItem('node', '${node.dev_eui}')" title="Center on Map">📍 Center</button>
                     <button class="action-btn" onclick="toggleVisibility('node', '${node.dev_eui}')" title="Toggle Visibility">${isHidden ? '👁️ Show' : '🙈 Hide'}</button>
