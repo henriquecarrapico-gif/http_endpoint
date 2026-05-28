@@ -473,7 +473,6 @@
                     fillOpacity: 0.08
                 });
             }
-            updateTrailOpacities();
             if (aircraftTrailPath) {
                 aircraftTrailPath.setStyle({ opacity: 0.35 });
             }
@@ -532,15 +531,11 @@
                                 const el = activeAircraftMarker.getElement();
                                 if (el) el.style.opacity = opacity;
                             }
-                            // Fade trail circles too
-                            aircraftTrail.forEach((pt, index) => {
-                                const age = Date.now() - (pt.createdAt || 0);
-                                const ageFraction = Math.max(0, 1 - (age / FADE_OUT_TIME_MS));
-                                const posRatio = (index + 1) / aircraftTrail.length;
-                                const combinedRatio = Math.max(0.05, ageFraction * posRatio);
+                            // Fade trail circles uniformly
+                            aircraftTrail.forEach(pt => {
                                 pt.circle.setStyle({
-                                    opacity: opacity * 0.20 * combinedRatio,
-                                    fillOpacity: opacity * 0.04 * combinedRatio
+                                    opacity: opacity * 0.35,
+                                    fillOpacity: opacity * 0.06
                                 });
                             });
                             // Fade trail polyline
@@ -653,15 +648,16 @@
             // Prune trail points older than the configured blob lifetime
             pruneExpiredTrailPoints();
 
-            // Create a Leaflet circle for this trail point
+            // Create a Leaflet circle for this trail point — constant opacity,
+            // no falloff.  Trail stays fully visible for its entire lifetime.
             const trailCircle = L.circle(latLng, {
                 radius: radius,
                 color: color,
                 weight: 1,
                 dashArray: '3, 4',
                 fillColor: color,
-                fillOpacity: 0.03,
-                opacity: 0.15,
+                fillOpacity: 0.06,
+                opacity: 0.35,
                 interactive: false
             }).addTo(map);
 
@@ -672,9 +668,6 @@
                 circle: trailCircle,
                 createdAt: Date.now()
             });
-
-            // Recalculate opacities based on age and position
-            updateTrailOpacities();
 
             // Redraw the dashed polyline connecting all trail coordinates
             updateTrailPath(activeLatLng);
@@ -691,22 +684,6 @@
             }
         }
 
-        // Recalculate trail circle opacities using both age fraction and positional gradient
-        function updateTrailOpacities() {
-            const len = aircraftTrail.length;
-            if (len === 0) return;
-            const now = Date.now();
-            aircraftTrail.forEach((point, index) => {
-                const age = now - (point.createdAt || 0);
-                const ageFraction = Math.max(0, 1 - (age / FADE_OUT_TIME_MS));
-                const posRatio = (index + 1) / len;
-                const combinedRatio = Math.max(0.05, ageFraction * posRatio);
-                point.circle.setStyle({
-                    opacity: 0.20 * combinedRatio,
-                    fillOpacity: 0.04 * combinedRatio
-                });
-            });
-        }
 
         // Redraw the dashed polyline connecting all trail coordinates plus the active blob position
         function updateTrailPath(activeLatLng) {
@@ -734,7 +711,6 @@
             if (aircraftTrail.length === 0) return;
             pruneExpiredTrailPoints();
             if (aircraftTrail.length > 0) {
-                updateTrailOpacities();
                 updateTrailPath(activeAircraftMarker ? activeAircraftMarker.getLatLng() : null);
             } else {
                 // All trail points expired — clean up the polyline too
