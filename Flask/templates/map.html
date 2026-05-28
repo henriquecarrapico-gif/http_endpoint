@@ -373,6 +373,15 @@
             GW_RANGE_FILL_OPACITY: 0.2,
             GW_RANGE_STROKE_WEIGHT: 2,
             GW_RANGE_STROKE_OPACITY: 1,
+
+            // Blob / trail styling
+            BLOB_FILL_OPACITY: 0.08,       // active uncertainty circle fill
+            TRAIL_CIRCLE_OPACITY: 0.35,    // trail breadcrumb stroke
+            TRAIL_CIRCLE_FILL_OPACITY: 0.06, // trail breadcrumb fill
+            TRAIL_PATH_OPACITY: 0.35,      // dashed polyline connecting trail
+            TRAIL_PATH_COLOR: '#64748b',
+            TRAIL_PATH_WEIGHT: 1.5,
+            TRAIL_PRUNE_INTERVAL_MS: 2000,  // how often to clean up expired trail points
         };
 
         // Triangulation state
@@ -474,7 +483,7 @@
                 });
             }
             if (aircraftTrailPath) {
-                aircraftTrailPath.setStyle({ opacity: 0.35 });
+                aircraftTrailPath.setStyle({ opacity: CONFIG.TRAIL_PATH_OPACITY });
             }
 
             const elapsed = Date.now() - lastTriangulationTime;
@@ -525,7 +534,7 @@
                             }
                         } else {
                             if (activeAircraftUncertainty) {
-                                activeAircraftUncertainty.setStyle({ fillOpacity: opacity * 0.08, opacity: opacity });
+                                activeAircraftUncertainty.setStyle({ fillOpacity: opacity * CONFIG.BLOB_FILL_OPACITY, opacity: opacity });
                             }
                             if (activeAircraftMarker) {
                                 const el = activeAircraftMarker.getElement();
@@ -534,13 +543,13 @@
                             // Fade trail circles uniformly
                             aircraftTrail.forEach(pt => {
                                 pt.circle.setStyle({
-                                    opacity: opacity * 0.35,
-                                    fillOpacity: opacity * 0.06
+                                    opacity: opacity * CONFIG.TRAIL_CIRCLE_OPACITY,
+                                    fillOpacity: opacity * CONFIG.TRAIL_CIRCLE_FILL_OPACITY
                                 });
                             });
                             // Fade trail polyline
                             if (aircraftTrailPath) {
-                                aircraftTrailPath.setStyle({ opacity: opacity * 0.35 });
+                                aircraftTrailPath.setStyle({ opacity: opacity * CONFIG.TRAIL_PATH_OPACITY });
                             }
                         }
                     }, 50);
@@ -656,8 +665,8 @@
                 weight: 1,
                 dashArray: '3, 4',
                 fillColor: color,
-                fillOpacity: 0.06,
-                opacity: 0.35,
+                fillOpacity: CONFIG.TRAIL_CIRCLE_FILL_OPACITY,
+                opacity: CONFIG.TRAIL_CIRCLE_OPACITY,
                 interactive: false
             }).addTo(map);
 
@@ -693,14 +702,14 @@
             }
 
             if (aircraftTrailPath) {
-                aircraftTrailPath.setStyle({ opacity: 0.35 });
+                aircraftTrailPath.setStyle({ opacity: CONFIG.TRAIL_PATH_OPACITY });
                 aircraftTrailPath.setLatLngs(pathCoords);
             } else if (pathCoords.length > 0) {
                 aircraftTrailPath = L.polyline(pathCoords, {
-                    color: '#64748b',
-                    weight: 1.5,
+                    color: CONFIG.TRAIL_PATH_COLOR,
+                    weight: CONFIG.TRAIL_PATH_WEIGHT,
                     dashArray: '4, 6',
-                    opacity: 0.35,
+                    opacity: CONFIG.TRAIL_PATH_OPACITY,
                     interactive: false
                 }).addTo(map);
             }
@@ -719,7 +728,7 @@
                     aircraftTrailPath = null;
                 }
             }
-        }, 2000);
+        }, CONFIG.TRAIL_PRUNE_INTERVAL_MS);
 
         // Checks recently active detections to see if any can be triangulated with the new one
         function checkTriangulation(newDet) {
@@ -862,7 +871,7 @@
                     color: groupColor,
                     fillColor: groupColor,
                     opacity: 1.0,
-                    fillOpacity: 0.08
+                    fillOpacity: CONFIG.BLOB_FILL_OPACITY
                 });
 
                 // Synchronize HTML styling inside L.divIcon dynamically
@@ -886,7 +895,7 @@
                     weight: 1,
                     dashArray: '3, 3',
                     fillColor: groupColor,
-                    fillOpacity: 0.08,
+                    fillOpacity: CONFIG.BLOB_FILL_OPACITY,
                     className: 'probability-blob-outer'
                 }).addTo(map);
 
@@ -906,7 +915,7 @@
                 // Initialize the trail polyline path with the single current coordinate
                 if (aircraftTrailPath) {
                     aircraftTrailPath.setLatLngs([centerLatLng]);
-                    aircraftTrailPath.setStyle({ opacity: 0.35 });
+                    aircraftTrailPath.setStyle({ opacity: CONFIG.TRAIL_PATH_OPACITY });
                 }
             }
 
