@@ -326,18 +326,11 @@
         // Connect to WebSocket
         const socket = io();
 
-        // Function to calculate color from green (0) to red (63)
-        // Sound group color mapper based on class_groups.csv categories
+        // Sound group color mapper — looks up the group name in CONFIG.GROUP_COLORS
         function getGroupColor(groupName) {
-            if (!groupName) return '#64748b'; // default slate
-            const name = groupName.toLowerCase();
-            if (name === 'ordnance') return '#dc2626'; // Crimson
-            if (name === 'alarm' || name === 'emergency_vehicle') return '#ea580c'; // Amber Orange
-            if (name === 'human') return '#0d9488'; // Teal
-            if (name === 'music') return '#8b5cf6'; // Purple
-            if (name.includes('car') || name.includes('truck') || name.includes('train') || name.includes('aircraft') || name.includes('engine') || name.includes('vehicle')) return '#475569'; // Slate Grey
-            if (name.includes('animal') || name.includes('pet') || name.includes('livestock') || name.includes('bird') || name.includes('insect') || name.includes('frog')) return '#16a34a'; // Green
-            return '#64748b'; // Default Slate
+            if (!groupName) return CONFIG.GROUP_COLORS._default;
+            const key = groupName.toLowerCase();
+            return CONFIG.GROUP_COLORS[key] || CONFIG.GROUP_COLORS._default;
         }
 
         // =====================================================================
@@ -382,6 +375,32 @@
             TRAIL_PATH_COLOR: '#64748b',
             TRAIL_PATH_WEIGHT: 1.5,
             TRAIL_PRUNE_INTERVAL_MS: 2000,  // how often to clean up expired trail points
+
+            // Sound group colors (used for detection lines, blobs, and trails)
+            GROUP_COLORS: {
+                ordnance:          '#dc2626', // Crimson
+                alarm:             '#ea580c', // Amber Orange
+                emergency_vehicle: '#ea580c', // Amber Orange
+                human:             '#0d9488', // Teal
+                music:             '#8b5cf6', // Purple
+                car:               '#475569', // Slate Grey
+                truck:             '#475569',
+                train:             '#475569',
+                aircraft:          '#475569',
+                jet_engine:        '#475569',
+                propeller:         '#475569',
+                helicopter:        '#475569',
+                engine:            '#475569',
+                small_motor:       '#475569',
+                watercraft:        '#475569',
+                domestic_pet:      '#16a34a', // Green
+                livestock:         '#16a34a',
+                wild_animal:       '#16a34a',
+                bird:              '#16a34a',
+                insect:            '#16a34a',
+                frog_reptile:      '#16a34a',
+                _default:          '#64748b', // Slate (fallback)
+            },
         };
 
         // Triangulation state
