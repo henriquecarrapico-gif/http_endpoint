@@ -39,6 +39,10 @@ try:
 except Exception as e:
     app.logger.error(f"Error loading sound classes from CSV: {e}")
 
+# Mic-check health class IDs (must match node firmware)
+HEALTH_OK_CLASS_ID = 1022
+HEALTH_ERROR_CLASS_ID = 1023
+
 @app.route("/", methods=["GET"])
 def index():
     endpoints = {}
@@ -266,23 +270,60 @@ def uplink():
             try:
                 cursor, conn = connect_to_database()
                 if cursor and conn:
-                    # Update gateway location if it exists
+                    # Update gateway location and last_seen timestamp
                     cursor.execute(
                         """
                         UPDATE gateways 
-                        SET latitude=%s, longitude=%s, altitude=%s
+                        SET latitude=%s, longitude=%s, altitude=%s, last_seen=NOW()
                         WHERE gateway_id=%s
+                        RETURNING last_seen
                         """,
                         (lat, lon, alt, gateway_id)
                     )
                     
                     if cursor.rowcount > 0:
+                        gw_last_seen_row = cursor.fetchone()
+                        gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
                         update_node_connections(cursor)
                         conn.commit()
                         app.logger.info(f"Auto-relocated gateway {gateway_id} to {lat}, {lon}")
+                        
+                        # Emit gateway_seen event so the frontend can update in real-time
+                        socketio.emit('gateway_seen', {
+                            'gateway_id': gateway_id,
+                            'last_seen': gw_last_seen
+                        })
+                    else:
+                        # Gateway exists in rxInfo but not in our DB — still update last_seen if it exists
+                        conn.rollback()
                     close_db_connection(cursor, conn)
             except Exception as e:
                 app.logger.error(f"Failed to auto-update gateway location: {e}")
+        elif gateway_id:
+            # Gateway is in rxInfo but without location — still update last_seen
+            try:
+                cursor2, conn2 = connect_to_database()
+                if cursor2 and conn2:
+                    cursor2.execute(
+                        """
+                        UPDATE gateways 
+                        SET last_seen=NOW()
+                        WHERE gateway_id=%s
+                        RETURNING last_seen
+                        """,
+                        (gateway_id,)
+                    )
+                    if cursor2.rowcount > 0:
+                        gw_last_seen_row = cursor2.fetchone()
+                        gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
+                        conn2.commit()
+                        socketio.emit('gateway_seen', {
+                            'gateway_id': gateway_id,
+                            'last_seen': gw_last_seen
+                        })
+                    close_db_connection(cursor2, conn2)
+            except Exception as e:
+                app.logger.error(f"Failed to update gateway last_seen: {e}")
 
     # Prepare batch data
     insert_values = []
@@ -297,10 +338,10 @@ def uplink():
             
         node_time = det.get("node_time")
         
-        # Track mic-check health status (1022=OK, 1023=error)
-        if class_id == 1022:
+        # Track mic-check health status
+        if class_id == HEALTH_OK_CLASS_ID:
             health_update = 'ok'
-        elif class_id == 1023:
+        elif class_id == HEALTH_ERROR_CLASS_ID:
             health_update = 'error'
         
         insert_values.append((dev_eui, timestamp, class_id, azimuth, node_time, rssi, snr))
@@ -428,7 +469,7 @@ def get_gateways():
         if not conn or not cursor:
             return jsonify({"status": "error", "message": "Database connection failed"}), 500
 
-        cursor.execute("SELECT gateway_id, name, latitude, longitude, altitude, range FROM gateways")
+        cursor.execute("SELECT gateway_id, name, latitude, longitude, altitude, range, last_seen FROM gateways")
         rows = cursor.fetchall()
         
         gateways = []
@@ -439,7 +480,8 @@ def get_gateways():
                 "latitude": row[2],
                 "longitude": row[3],
                 "altitude": row[4],
-                "range": row[5]
+                "range": row[5],
+                "last_seen": row[6].isoformat() if row[6] else None
             })
         return jsonify(gateways), 200
     except Exception as e:

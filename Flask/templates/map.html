@@ -340,6 +340,41 @@
             return '#64748b'; // Default Slate
         }
 
+        // =====================================================================
+        // CENTRALIZED CONFIGURATION
+        // All tuneable constants in one place for easy adjustment.
+        // =====================================================================
+        const CONFIG = {
+            // Mic-check health type codes sent by the node firmware
+            HEALTH_OK_CLASS_ID: 1022,
+            HEALTH_ERROR_CLASS_ID: 1023,
+
+            // Node health staleness threshold (ms) – if no health check within
+            // this window the node is considered "stale" and shown in yellow.
+            NODE_STALE_MS: 15 * 60 * 1000,   // 15 minutes
+
+            // Gateway staleness threshold (ms) – if no uplink was relayed within
+            // this window the gateway is considered "not seen" and shown in yellow.
+            GATEWAY_STALE_MS: 30 * 60 * 1000, // 30 minutes
+
+            // Health staleness re-evaluation interval (ms)
+            STALENESS_CHECK_INTERVAL_MS: 30000, // 30 seconds
+
+            // Health colors
+            COLOR_HEALTHY: '#00e676',   // bright green – node OK
+            COLOR_ERROR:   '#ef4444',   // red – node mic error
+            COLOR_STALE:   '#eab308',   // yellow – stale / unknown
+            COLOR_GW_OK:   '#22c55e',   // green – gateway recently active
+
+            // Range circle styling
+            NODE_RANGE_FILL_OPACITY: 0.22,
+            NODE_RANGE_STROKE_WEIGHT: 2,
+            NODE_RANGE_STROKE_OPACITY: 0.7,
+            GW_RANGE_FILL_OPACITY: 0.12,
+            GW_RANGE_STROKE_WEIGHT: 2,
+            GW_RANGE_STROKE_OPACITY: 0.6,
+        };
+
         // Triangulation state
         const activeDetections = [];
         const activeTriangulations = new Set();
@@ -926,6 +961,10 @@
         function drawDetection(det, ageMs = 0) {
             if (det.azimuth === null || det.azimuth === undefined) return;
 
+            // Skip drawing lines for mic-check health codes
+            const cid = parseInt(det.class_id);
+            if (cid === CONFIG.HEALTH_OK_CLASS_ID || cid === CONFIG.HEALTH_ERROR_CLASS_ID) return;
+
             const now = Date.now();
             let secsSinceMidnight = det.node_time;
             if (secsSinceMidnight === undefined || secsSinceMidnight === null) {
@@ -974,11 +1013,9 @@
                 const gName = classInfo ? classInfo.group_name : 'Unknown';
                 const color = getGroupColor(gName);
 
-                // Reduce the opacity and weight of the lines to be very transparent so that the blob and its trail stand out.
-                const classIdVal = parseInt(det.class_id);
-                const isImportantType = (classIdVal === 1022 || classIdVal === 1023);
-                const lineOpacity = isImportantType ? 1 : 0.12;
-                const lineWeight = isImportantType ? 3.0 : 1.5;
+                // Detection line style
+                const lineOpacity = 0.12;
+                const lineWeight = 1.5;
 
                 const remainingLineTime = Math.max(0, LINE_LIFETIME_MS - ageMs);
                 if (remainingLineTime > 0) {
@@ -1021,40 +1058,60 @@
             }
         });
 
-        // Configure the map to render horizontally continuously
+        // Real-time gateway "last seen" updates when a gateway relays an uplink
+        socket.on('gateway_seen', function (data) {
+            const gw = gatewaysData.find(g => g.gateway_id === data.gateway_id);
+            if (gw) {
+                gw.last_seen = data.last_seen || new Date().toISOString();
+                drawGateway(gw);
+                renderSidebar();
+            }
+        });
+
+        // Configure the map to render horizontally continuous
         //map.options.worldCopyJump = true;
 
-        // Health staleness threshold in milliseconds (15 minutes)
-        const HEALTH_STALE_THRESHOLD_MS = 15 * 60 * 1000;
+        // ---- Node Health Logic ----
 
         // Compute the effective health color for a node's range circle.
-        // Green = OK and checked within the last 15 min
-        // Red   = Error and checked within the last 15 min
-        // Yellow = No health data, or last check older than 15 min (stale)
         function getNodeHealthColor(node) {
-            if (!node.last_health_check) return '#eab308'; // yellow – never checked
+            if (!node.last_health_check) return CONFIG.COLOR_STALE;
 
             const ageMs = Date.now() - new Date(node.last_health_check).getTime();
-            if (ageMs > HEALTH_STALE_THRESHOLD_MS) return '#eab308'; // yellow – stale
+            if (ageMs > CONFIG.NODE_STALE_MS) return CONFIG.COLOR_STALE;
 
-            if (node.health_status === 'ok') return '#22c55e';    // green
-            if (node.health_status === 'error') return '#ef4444'; // red
-            return '#eab308'; // yellow – unknown status
+            if (node.health_status === 'ok') return CONFIG.COLOR_HEALTHY;
+            if (node.health_status === 'error') return CONFIG.COLOR_ERROR;
+            return CONFIG.COLOR_STALE;
         }
 
-        // Human-readable label for health
+        // Human-readable label for node health (no time shown – staleness is
+        // indicated by the color itself since checks happen every 15 min).
         function getNodeHealthLabel(node) {
             if (!node.last_health_check) return '⚠️ Never checked';
 
             const ageMs = Date.now() - new Date(node.last_health_check).getTime();
-            const agoText = formatAgo(ageMs);
+            if (ageMs > CONFIG.NODE_STALE_MS) return '⚠️ Stale';
 
-            if (ageMs > HEALTH_STALE_THRESHOLD_MS) {
-                return `⚠️ Stale (last: ${agoText} ago)`;
-            }
-            if (node.health_status === 'ok') return `✅ Healthy (${agoText} ago)`;
-            if (node.health_status === 'error') return `❌ Mic Error (${agoText} ago)`;
-            return `⚠️ Unknown (${agoText} ago)`;
+            if (node.health_status === 'ok') return '✅ Healthy';
+            if (node.health_status === 'error') return '❌ Mic Error';
+            return '⚠️ Unknown';
+        }
+
+        // ---- Gateway Health Logic ----
+
+        function getGatewayHealthColor(gw) {
+            if (!gw.last_seen) return CONFIG.COLOR_GW_OK;
+            const ageMs = Date.now() - new Date(gw.last_seen).getTime();
+            if (ageMs > CONFIG.GATEWAY_STALE_MS) return CONFIG.COLOR_STALE;
+            return CONFIG.COLOR_GW_OK;
+        }
+
+        function getGatewayHealthLabel(gw) {
+            if (!gw.last_seen) return '✅ Active';
+            const ageMs = Date.now() - new Date(gw.last_seen).getTime();
+            if (ageMs > CONFIG.GATEWAY_STALE_MS) return '⚠️ Not seen';
+            return '✅ Active';
         }
 
         function formatAgo(ms) {
@@ -1107,9 +1164,9 @@
             const circle = L.circle([node.latitude, node.longitude], {
                 color: rangeColor,
                 fillColor: rangeColor,
-                fillOpacity: 0.15,
-                weight: 2,
-                opacity: 0.6,
+                fillOpacity: CONFIG.NODE_RANGE_FILL_OPACITY,
+                weight: CONFIG.NODE_RANGE_STROKE_WEIGHT,
+                opacity: CONFIG.NODE_RANGE_STROKE_OPACITY,
                 radius: parseFloat(node.range)
             }).addTo(map);
 
@@ -1148,9 +1205,9 @@
             drawConnections(); // Redraw connections when a node is drawn/updated
         }
 
-        // Periodically re-evaluate node health staleness every 30 seconds.
-        // Nodes that were green/red will transition to yellow once their
-        // last_health_check exceeds the 15-minute threshold.
+        // Periodically re-evaluate health staleness every 30 seconds.
+        // Nodes transition green/red → yellow when last_health_check exceeds 15 min.
+        // Gateways transition green → yellow when last_seen exceeds 30 min.
         setInterval(() => {
             nodesData.forEach(node => {
                 const obj = nodeObjects[node.dev_eui];
@@ -1159,12 +1216,25 @@
                 const currentColor = getNodeHealthColor(node);
                 const circleColor = obj.circle.options.color;
 
-                // Only redraw if the color actually changed
                 if (circleColor !== currentColor) {
                     drawNode(node);
                 }
             });
-        }, 30000);
+
+            gatewaysData.forEach(gw => {
+                const obj = gatewayObjects[gw.gateway_id];
+                if (!obj || obj.is_hidden) return;
+
+                const currentColor = getGatewayHealthColor(gw);
+                const circleColor = obj.circle.options.color;
+
+                if (circleColor !== currentColor) {
+                    drawGateway(gw);
+                }
+            });
+
+            renderSidebar();
+        }, CONFIG.STALENESS_CHECK_INTERVAL_MS);
 
         // Function to draw a gateway on the map
         function drawGateway(gw) {
@@ -1176,9 +1246,13 @@
                 }
             }
 
+            const gwColor = getGatewayHealthColor(gw);
+            const gwHealthLabel = getGatewayHealthLabel(gw);
+            const lastSeen = gw.last_seen ? new Date(gw.last_seen).toLocaleString() : 'Never';
+
             const gwIcon = L.divIcon({
                 className: 'custom-gw-icon',
-                html: '<div style="background-color:green; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>',
+                html: `<div style="background-color:${gwColor}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow: 0 0 6px ${gwColor};"></div>`,
                 iconSize: [20, 20],
                 iconAnchor: [10, 10]
             });
@@ -1186,7 +1260,7 @@
             const marker = L.marker([gw.latitude, gw.longitude], {
                 icon: gwIcon,
                 draggable: true
-            }).addTo(map).bindPopup(`<b>Gateway Name:</b> ${gw.name || 'Unnamed'}<br><b>Gateway ID:</b> ${gw.gateway_id}<br><b>Altitude:</b> ${gw.altitude || 0}m<br><b>Range:</b> ${gw.range}m`);
+            }).addTo(map).bindPopup(`<b>Gateway Name:</b> ${gw.name || 'Unnamed'}<br><b>Gateway ID:</b> ${gw.gateway_id}<br><b>Altitude:</b> ${gw.altitude || 0}m<br><b>Range:</b> ${gw.range}m<br><b>Status:</b> ${gwHealthLabel}<br><b>Last Seen:</b> ${lastSeen}`);
 
             let tooltip = null;
             if (gw.name) {
@@ -1196,10 +1270,11 @@
             }
 
             const circle = L.circle([gw.latitude, gw.longitude], {
-                color: 'green',
-                fillColor: 'green',
-                fillOpacity: 0.2, // translucent body
-                opacity: 1.0,    // opaque border
+                color: gwColor,
+                fillColor: gwColor,
+                fillOpacity: CONFIG.GW_RANGE_FILL_OPACITY,
+                weight: CONFIG.GW_RANGE_STROKE_WEIGHT,
+                opacity: CONFIG.GW_RANGE_STROKE_OPACITY,
                 radius: parseFloat(gw.range)
             }).addTo(map);
 
@@ -1279,11 +1354,13 @@
 
             gatewaysData.forEach(gw => {
                 const isHidden = gatewayObjects[gw.gateway_id]?.is_hidden;
+                const gwColor = getGatewayHealthColor(gw);
+                const gwHealthLabel = getGatewayHealthLabel(gw);
                 const item = document.createElement('div');
                 item.className = 'node-item';
                 item.innerHTML = `
-                <h4><span style="color:green;">●</span> ${gw.name || 'Unnamed GW'}</h4>
-                <div style="font-size: 11px; color: #666;">ID: ${gw.gateway_id}</div>
+                <h4><span style="color:${gwColor}; text-shadow: 0 0 4px ${gwColor};">●</span> ${gw.name || 'Unnamed GW'}</h4>
+                <div style="font-size: 11px; color: #666;">ID: ${gw.gateway_id}<br/>${gwHealthLabel}</div>
                 <div class="node-actions">
                     <button class="action-btn" onclick="centerOnItem('gateway', '${gw.gateway_id}')" title="Center on Map">📍 Center</button>
                     <button class="action-btn" onclick="toggleVisibility('gateway', '${gw.gateway_id}')" title="Toggle Visibility">${isHidden ? '👁️ Show' : '🙈 Hide'}</button>

@@ -21,7 +21,8 @@ CREATE TABLE IF NOT EXISTS gateways (
     latitude DOUBLE PRECISION,
     longitude DOUBLE PRECISION,
     altitude DOUBLE PRECISION,
-    range DOUBLE PRECISION
+    range DOUBLE PRECISION,
+    last_seen TIMESTAMPTZ                   -- timestamp of last uplink relayed through this gateway
 );
 
 CREATE TABLE IF NOT EXISTS detections (
