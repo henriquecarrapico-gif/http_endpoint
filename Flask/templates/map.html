@@ -428,7 +428,8 @@
         let activeTrackPolyline = null;  // currently displayed OpenSky track
         let adsbFetchTimer = null;
         const ADSB_POLL_INTERVAL = 10000; // 10 seconds
-        const ADSB_RADIUS_NM = 100;       // nautical miles
+        const ADSB_RADIUS_NM = 250;       // nautical miles
+        let selectedAircraftHex = null;   // hex of currently selected aircraft
 
         function getAltitudeColor(altBaro) {
             if (altBaro === 'ground' || altBaro == null) return '#888';
@@ -629,7 +630,7 @@
                         zIndexOffset: isGround ? -1000 : (ac.alt_baro || 0)
                     });
 
-                    marker.bindPopup(createAdsbPopup(ac), { maxWidth: 250 });
+                    marker.bindPopup(createAdsbPopup(ac), { maxWidth: 250, autoPan: false });
 
                     if (callsign) {
                         marker.bindTooltip(callsign, {
@@ -642,6 +643,7 @@
 
                     // Fetch and show track on click
                     marker.on('click', function () {
+                        selectedAircraftHex = ac.hex;
                         fetchAndShowTrack(ac.hex);
                     });
 
@@ -692,9 +694,10 @@
         // Start polling if enabled
         if (adsbEnabled) startAdsbPolling();
 
-        // Clear aircraft track when popup is closed
+        // Clear aircraft track and selection when popup is closed
         map.on('popupclose', function () {
             clearTrack();
+            selectedAircraftHex = null;
         });
 
         // Add Geocoder search control to map

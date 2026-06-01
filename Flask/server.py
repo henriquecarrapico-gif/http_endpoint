@@ -651,5 +651,9 @@ def adsb_track_proxy(icao24):
         app.logger.error(f"OpenSky track proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/svg-tuner")
+def svg_tuner():
+    return render_template("svg_tuner.html")
+
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000)
