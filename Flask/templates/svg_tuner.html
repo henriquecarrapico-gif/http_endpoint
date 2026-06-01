@@ -140,12 +140,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 100px;
+    height: 140px;
     margin-bottom: 12px;
     border-radius: 8px;
     position: relative;
     overflow: hidden;
+    cursor: grab;
+    user-select: none;
   }
+
+  .icon-preview-area.dragging { cursor: grabbing; }
 
   .icon-preview-area.bg-dark { background: #0f172a; }
   .icon-preview-area.bg-light { background: #f1f5f9; }
@@ -157,13 +161,33 @@
     content: '';
     position: absolute;
     background: rgba(96, 165, 250, 0.15);
+    pointer-events: none;
+    z-index: 1;
   }
   .icon-preview-area::before { width: 1px; height: 100%; left: 50%; }
   .icon-preview-area::after  { height: 1px; width: 100%; top: 50%; }
 
+  .svg-wrap {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+
   .icon-preview-area svg {
     transition: width 0.15s, height 0.15s;
     filter: drop-shadow(0 0 3px rgba(0,0,0,0.6));
+  }
+
+  .drag-hint {
+    position: absolute;
+    bottom: 4px;
+    right: 6px;
+    font-size: 0.65rem;
+    color: rgba(148,163,184,0.5);
+    pointer-events: none;
+    z-index: 2;
   }
 
   .slider-row {
@@ -277,7 +301,7 @@
 <!-- Global Controls -->
 <div class="global-controls">
   <label>🔍 Global Scale</label>
-  <input type="range" id="globalScale" min="0.5" max="4" step="0.1" value="1.0">
+  <input type="range" id="globalScale" min="0.5" max="10" step="0.1" value="1.0">
   <span class="global-value" id="globalScaleVal">1.0×</span>
 
   <label>🎨 Fill Color</label>
@@ -356,12 +380,13 @@
           <h3>${info.label}</h3>
           <span class="size-badge" id="badge-${key}">${BASE_SIZE}px</span>
         </div>
-        <div class="icon-preview-area ${currentBg}" id="preview-${key}">
-          <div id="svgwrap-${key}" style="display:flex;align-items:center;justify-content:center;"></div>
+        <div class="icon-preview-area ${currentBg}" id="preview-${key}" data-key="${key}">
+          <div class="svg-wrap" id="svgwrap-${key}"></div>
+          <span class="drag-hint">drag to pan · dblclick to reset</span>
         </div>
         <div class="slider-row">
           <label>Scale</label>
-          <input type="range" id="scale-${key}" min="0.2" max="3.0" step="0.05" value="${iconScales[key]}">
+          <input type="range" id="scale-${key}" min="0.2" max="10.0" step="0.05" value="${iconScales[key]}">
           <span class="val" id="val-${key}">${iconScales[key].toFixed(2)}</span>
         </div>
       `;
@@ -372,6 +397,61 @@
         updateAll();
       });
     });
+
+    // Setup drag-to-pan on all preview areas
+    setupDragPan();
+  }
+
+  const iconOffsets = {}; // key -> { x, y }
+
+  function setupDragPan() {
+    document.querySelectorAll('.icon-preview-area').forEach(area => {
+      const key = area.dataset.key;
+      if (!key) return;
+      if (!iconOffsets[key]) iconOffsets[key] = { x: 0, y: 0 };
+
+      let dragging = false, startX, startY, startOX, startOY;
+
+      area.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        dragging = true;
+        area.classList.add('dragging');
+        startX = e.clientX;
+        startY = e.clientY;
+        startOX = iconOffsets[key].x;
+        startOY = iconOffsets[key].y;
+      });
+
+      window.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        iconOffsets[key].x = startOX + (e.clientX - startX);
+        iconOffsets[key].y = startOY + (e.clientY - startY);
+        applyOffset(key);
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (dragging) {
+          dragging = false;
+          area.classList.remove('dragging');
+        }
+      });
+
+      // Double-click to reset
+      area.addEventListener('dblclick', () => {
+        iconOffsets[key] = { x: 0, y: 0 };
+        applyOffset(key);
+      });
+    });
+  }
+
+  function applyOffset(key) {
+    const wrap = document.getElementById(`svgwrap-${key}`);
+    if (!wrap) return;
+    const off = iconOffsets[key] || { x: 0, y: 0 };
+    wrap.style.left = `calc(50% + ${off.x}px)`;
+    wrap.style.top = `calc(50% + ${off.y}px)`;
+    wrap.style.transform = `translate(-50%, -50%) rotate(${parseInt(document.getElementById('globalRotation').value) || 0}deg)`;
   }
 
   function updateAll() {
@@ -399,7 +479,7 @@
         let svg = svgContent[key];
         svg = svg.replace('<svg ', `<svg style="fill:${color};width:${pxSize}px;height:${pxSize}px;" `);
         wrap.innerHTML = svg;
-        wrap.style.transform = `rotate(${rotation}deg)`;
+        applyOffset(key);
       }
     });
 
