@@ -301,7 +301,7 @@
 <!-- Global Controls -->
 <div class="global-controls">
   <label>🔍 Global Scale</label>
-  <input type="range" id="globalScale" min="0.5" max="10" step="0.1" value="1.0">
+  <input type="range" id="globalScale" min="0.5" max="50" step="0.1" value="1.0">
   <span class="global-value" id="globalScaleVal">1.0×</span>
 
   <label>🎨 Fill Color</label>
@@ -386,7 +386,7 @@
         </div>
         <div class="slider-row">
           <label>Scale</label>
-          <input type="range" id="scale-${key}" min="0.2" max="10.0" step="0.05" value="${iconScales[key]}">
+          <input type="range" id="scale-${key}" min="0.2" max="50.0" step="0.05" value="${iconScales[key]}">
           <span class="val" id="val-${key}">${iconScales[key].toFixed(2)}</span>
         </div>
       `;
