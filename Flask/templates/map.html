@@ -296,13 +296,53 @@
             map.setMinZoom(map.getBoundsZoom(worldBounds, true));
         });
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // ─── Base map layers ────────────────────────────────────────
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
-            noWrap: true, // Stops the map tiles from repeating horizontally
+            noWrap: true,
             bounds: worldBounds,
             attribution: '© OpenStreetMap contributors'
-        }).addTo(map);
+        });
+
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18,
+            noWrap: true,
+            bounds: worldBounds,
+            attribution: 'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics'
+        });
+
+        const topoLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            noWrap: true,
+            bounds: worldBounds,
+            attribution: '© OpenTopoMap (CC-BY-SA)'
+        });
+
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20,
+            noWrap: true,
+            bounds: worldBounds,
+            subdomains: 'abcd',
+            attribution: '© CARTO'
+        });
+
+        // Restore saved map type preference or default to Street
+        const baseMaps = {
+            '🗺️ Street': streetLayer,
+            '🛰️ Satellite': satelliteLayer,
+            '⛰️ Topographic': topoLayer,
+            '🌙 Dark': darkLayer
+        };
+        const savedMapType = localStorage.getItem('divs_map_type') || '🗺️ Street';
+        (baseMaps[savedMapType] || streetLayer).addTo(map);
+
+        // Add layer control selector (top-right)
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        // Persist the user's map type selection
+        map.on('baselayerchange', function(e) {
+            localStorage.setItem('divs_map_type', e.name);
+        });
 
         // Add Geocoder search control to map
         L.Control.geocoder({

@@ -1,8 +1,12 @@
 function decodeUplink(input) {
     var b = input.bytes;
 
-    // Each detection is 5 bytes (40 bits): [azimuth:10][class_id:10][node_time:20]
-    if (b.length % 5 !== 0 || b.length === 0) {
+    // 0-byte payload = time sync or Class C notification uplink (no detections)
+    if (b.length === 0) {
+        return { data: { type: "time_sync", detections: [] } };
+    }
+
+    if (b.length % 5 !== 0) {
         return { errors: ["payload size invalid: expected multiple of 5 bytes, got " + b.length] };
     }
 
