@@ -1,6 +1,9 @@
 from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO
 import psycopg2
+from urllib.request import urlopen
+from urllib.error import URLError
+import json
 from psycopg2.extras import execute_values
 import os
 from database import connect_to_database, close_db_connection
@@ -600,6 +603,38 @@ def delete_gateway(gateway_id):
             close_db_connection(cursor, conn)
 
     return jsonify({"status": "ok"}), 200
+
+# ---------------------------------------------------------
+# ADS-B Proxy (bypasses browser CORS restrictions)
+# ---------------------------------------------------------
+
+@app.route("/api/adsb", methods=["GET"])
+def adsb_proxy():
+    lat = request.args.get("lat")
+    lon = request.args.get("lon")
+    dist = request.args.get("dist", "100")
+
+    if lat is None or lon is None:
+        return jsonify({"status": "error", "message": "Missing lat/lon parameters"}), 400
+
+    try:
+        lat_f = float(lat)
+        lon_f = float(lon)
+        dist_i = min(int(float(dist)), 250)  # cap at 250nm
+    except (ValueError, TypeError):
+        return jsonify({"status": "error", "message": "Invalid parameters"}), 400
+
+    url = f"https://api.adsb.lol/v2/lat/{lat_f:.4f}/lon/{lon_f:.4f}/dist/{dist_i}"
+    try:
+        with urlopen(url, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        return jsonify(data), 200
+    except URLError as e:
+        app.logger.error(f"ADS-B API fetch failed: {e}")
+        return jsonify({"status": "error", "message": "Failed to fetch ADS-B data"}), 502
+    except Exception as e:
+        app.logger.error(f"ADS-B proxy error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000)

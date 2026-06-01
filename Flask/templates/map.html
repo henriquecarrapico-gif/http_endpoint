@@ -198,28 +198,33 @@
         /* ADS-B aircraft markers */
         .adsb-aircraft-icon {
             font-size: 20px;
-            text-shadow: 0 0 4px rgba(0,0,0,0.6);
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
             transition: transform 0.3s ease;
             cursor: pointer;
         }
+
         .adsb-aircraft-icon.ground {
             opacity: 0.5;
         }
+
         .adsb-popup-table {
             font-size: 12px;
             border-collapse: collapse;
             width: 100%;
         }
+
         .adsb-popup-table td {
             padding: 2px 6px;
         }
+
         .adsb-popup-table td:first-child {
             font-weight: 600;
             color: #555;
             white-space: nowrap;
         }
+
         .adsb-callsign-tooltip {
-            background: rgba(0,0,0,0.7);
+            background: rgba(0, 0, 0, 0.7);
             border: none;
             color: #fff;
             font-size: 10px;
@@ -229,6 +234,7 @@
             box-shadow: none;
             letter-spacing: 0.5px;
         }
+
         .adsb-callsign-tooltip::before {
             border: none;
         }
@@ -387,18 +393,18 @@
         L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
         // Persist the user's map type selection
-        map.on('baselayerchange', function(e) {
+        map.on('baselayerchange', function (e) {
             localStorage.setItem('divs_map_type', e.name);
         });
 
         // Persist ADS-B overlay toggle
-        map.on('overlayadd', function(e) {
+        map.on('overlayadd', function (e) {
             if (e.name === '✈️ ADS-B Aircraft') {
                 localStorage.setItem('divs_adsb_enabled', 'true');
                 fetchAdsbData(); // Immediate refresh on enable
             }
         });
-        map.on('overlayremove', function(e) {
+        map.on('overlayremove', function (e) {
             if (e.name === '✈️ ADS-B Aircraft') {
                 localStorage.setItem('divs_adsb_enabled', 'false');
             }
@@ -520,7 +526,7 @@
             if (!map.hasLayer(adsbLayerGroup)) return;
 
             const center = map.getCenter();
-            const url = `https://api.adsb.lol/v2/lat/${center.lat.toFixed(4)}/lon/${center.lng.toFixed(4)}/dist/${ADSB_RADIUS_NM}`;
+            const url = `/api/adsb?lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}&dist=${ADSB_RADIUS_NM}`;
 
             fetch(url)
                 .then(res => res.json())
@@ -540,7 +546,7 @@
         }
 
         // Re-fetch when map is moved significantly
-        map.on('moveend', function() {
+        map.on('moveend', function () {
             if (map.hasLayer(adsbLayerGroup)) {
                 fetchAdsbData();
             }
@@ -599,10 +605,10 @@
             STALENESS_CHECK_INTERVAL_MS: 30000, // 30 seconds
 
             // Health colors
-            COLOR_HEALTHY: '#00CF00',   // bright green – node OK
-            COLOR_ERROR:   '#ef4444',   // red – node mic error
-            COLOR_STALE:   '#eab308',   // yellow – stale / unknown
-            COLOR_GW_OK:   '#228B22',   // green – gateway recently active
+            COLOR_HEALTHY: '#17e310',   // bright green – node OK
+            COLOR_ERROR: '#ff1c1c',   // red – node mic error
+            COLOR_STALE: '#ffff00',   // yellow – stale / unknown
+            COLOR_GW_OK: '#187a24',   // green – gateway recently active
 
             // Range circle styling
             NODE_RANGE_FILL_OPACITY: 0.3,
@@ -623,28 +629,28 @@
 
             // Sound group colors (used for detection lines, blobs, and trails)
             GROUP_COLORS: {
-                ordnance:          '#dc2626', // Crimson
-                alarm:             '#ea580c', // Amber Orange
+                ordnance: '#dc2626', // Crimson
+                alarm: '#ea580c', // Amber Orange
                 emergency_vehicle: '#ea580c', // Amber Orange
-                human:             '#0d9488', // Teal
-                music:             '#8b5cf6', // Purple
-                car:               '#475569', // Slate Grey
-                truck:             '#475569',
-                train:             '#475569',
-                aircraft:          '#475569',
-                jet_engine:        '#475569',
-                propeller:         '#475569',
-                helicopter:        '#475569',
-                engine:            '#475569',
-                small_motor:       '#475569',
-                watercraft:        '#475569',
-                domestic_pet:      '#16a34a', // Green
-                livestock:         '#16a34a',
-                wild_animal:       '#16a34a',
-                bird:              '#16a34a',
-                insect:            '#16a34a',
-                frog_reptile:      '#16a34a',
-                _default:          '#64748b', // Slate (fallback)
+                human: '#0d9488', // Teal
+                music: '#8b5cf6', // Purple
+                car: '#475569', // Slate Grey
+                truck: '#475569',
+                train: '#475569',
+                aircraft: '#475569',
+                jet_engine: '#475569',
+                propeller: '#475569',
+                helicopter: '#475569',
+                engine: '#475569',
+                small_motor: '#475569',
+                watercraft: '#475569',
+                domestic_pet: '#16a34a', // Green
+                livestock: '#16a34a',
+                wild_animal: '#16a34a',
+                bird: '#16a34a',
+                insect: '#16a34a',
+                frog_reptile: '#16a34a',
+                _default: '#64748b', // Slate (fallback)
             },
         };
 
