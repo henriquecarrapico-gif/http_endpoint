@@ -473,60 +473,90 @@
                 .catch(() => { AIRCRAFT_SVGS[key] = FALLBACK_SVG; });
         });
 
-        function getAircraftSvg(category, typeCode) {
+        // ─── SVG icon size config ──────────────────────────────────
+        const SVG_BASE_SIZE = 28;
+        const SVG_GLOBAL_SCALE = 1.00;
+        const SVG_ICON_SCALES = {
+            ultralight    : 46.95,  // Ultralight / Glider
+            light         : 27.25,  // Light GA / Prop
+            jet_short     : 4.95,   // Airliner 2-Eng Short
+            bizjet        : 50.00,  // Business Jet
+            jet           : 25.00,  // Airliner 2-Eng
+            jet2          : 50.00,  // Small Jet
+            jet_shorter   : 5.10,   // Airliner 2-Eng Shorter
+            jet_long      : 3.85,   // Airliner 2-Eng Long
+            heavy         : 33.40,  // Heavy 4-Engine
+            fighter       : 50.00,  // Fighter Jet
+            bomber        : 33.60,  // Bomber / Stealth
+            heli          : 17.80,  // Helicopter
+            fire          : 50.00,  // Fire / Emergency
+        };
+
+        function getIconSize(key) {
+            const px = Math.round(SVG_BASE_SIZE * (SVG_ICON_SCALES[key] || 1) * SVG_GLOBAL_SCALE);
+            return [px, px];
+        }
+
+        // Returns the SVG_FILE_MAP key for an aircraft based on category + type code
+        function getAircraftTypeKey(category, typeCode) {
             const t = (typeCode || '').toUpperCase();
             const cat = (category || '').toUpperCase();
 
             // Helicopter types
             if (cat === 'A7' || /^(H[0-9]|EC[0-9]|AS[0-9]|R22|R44|R66|S[0-9]{2}|B[0-9]{3}H|A109|AW|NH90|LYNX|PUMA|BELL|UH|AH|CH[0-9]|MI[0-9]|KA[0-9])/.test(t)) {
-                return AIRCRAFT_SVGS.heli;
+                return 'heli';
             }
             // Ground vehicles / fire / emergency
             if (cat.startsWith('B') || cat === 'C3') {
-                return AIRCRAFT_SVGS.fire;
+                return 'fire';
             }
             // Military fighter
             if (/^(F1[4-8]|F2[0-2]|F35|EF20|EUFI|RAFA|GRIF|TORN|MIG|SU[0-9]|JAS|HAWK|T38|T45|L39|M346|FA18|F16|F15)/.test(t)) {
-                return AIRCRAFT_SVGS.fighter;
+                return 'fighter';
             }
             // Military bomber / stealth / large military
             if (/^(B1|B2|B52|A10|AC13|C130|C17|KC|P3|P8|E[0-9][A-Z]|RC|U2|RQ|MQ|PRED|REAP)/.test(t)) {
-                return AIRCRAFT_SVGS.bomber;
+                return 'bomber';
             }
             // Heavy 4-engine (B747, A380, A340, AN-124)
             if (cat === 'A5' || /^(B74|A34|A38|IL96|AN12|AN22|AN12|C5|A400)/.test(t)) {
-                return AIRCRAFT_SVGS.heavy;
+                return 'heavy';
             }
             // Long-range 2-engine (B777, B787, A350, A330)
             if (/^(B77|B78|A35|A33|A30|B76)/.test(t)) {
-                return AIRCRAFT_SVGS.jet_long;
+                return 'jet_long';
             }
             // Medium 2-engine (A320, B737, B757)
             if (cat === 'A3' || /^(B73|B38|A31|A32|A2[0-2]|B75|MD[0-9]|B71|B72|DC9|F[0-9]{2})/.test(t)) {
-                return AIRCRAFT_SVGS.jet_short;
+                return 'jet_short';
             }
             // Regional jets / short-haul
             if (/^(E[0-9]{3}|CRJ|ERJ|DH8|AT[0-9]|SF34|J32|D328|AN[0-9]{2})/.test(t)) {
-                return AIRCRAFT_SVGS.jet_shorter;
+                return 'jet_shorter';
             }
             // Business jet (Gulfstream, Citation, Learjet, Falcon, etc.)
             if (cat === 'A4' || /^(GLF|CL[0-9]|LJ[0-9]|FA[0-9]|C56|C68|C25|C75|GA[0-9]|H25|BE4|PRM|PC24)/.test(t)) {
-                return AIRCRAFT_SVGS.bizjet;
+                return 'bizjet';
             }
             // Small twin / commuter
             if (cat === 'A2' || /^(BE[0-9]|C[0-4][0-9]{2}|PA[0-9]{2}T|DHC|BN2|L410|SW[0-9]|P06T|P18)/.test(t)) {
-                return AIRCRAFT_SVGS.jet2;
+                return 'jet2';
             }
             // Light single-engine GA
             if (cat === 'A1' || /^(C1[0-9]{2}|C20[0-9]|PA[0-9]{2}|DR[0-9]|P28|PA28|PA32|AA[0-9]|DA[0-9]|SR2[0-2]|RV[0-9]|M20|TB[0-9])/.test(t)) {
-                return AIRCRAFT_SVGS.light;
+                return 'light';
             }
             // Ultralight / glider / paramotor
             if (cat === 'A0' || cat === 'C1' || cat === 'C2' || /^(ULM|PARA|GLAS|GLID|ASK|LS[0-9]|DG[0-9]|VENT)/.test(t)) {
-                return AIRCRAFT_SVGS.ultralight;
+                return 'ultralight';
             }
             // Default: standard airliner
-            return AIRCRAFT_SVGS.jet || FALLBACK_SVG;
+            return 'jet';
+        }
+
+        function getAircraftSvg(category, typeCode) {
+            const key = getAircraftTypeKey(category, typeCode);
+            return AIRCRAFT_SVGS[key] || FALLBACK_SVG;
         }
 
         function createAdsbPopup(ac) {
@@ -616,7 +646,8 @@
                     // Create new marker with type-specific SVG icon
                     const svgHtml = getAircraftSvg(ac.category, ac.t);
                     const iconHtml = svgHtml.replace('<svg ', `<svg style="fill:${color};filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))" `);
-                    const iconSize = ac.category === 'A5' || (ac.t && /^(B74|B77|B78|A33|A34|A35|A38)/.test(ac.t.toUpperCase())) ? [28, 28] : [24, 24];
+                    const typeKey = getAircraftTypeKey(ac.category, ac.t);
+                    const iconSize = getIconSize(typeKey);
                     const icon = L.divIcon({
                         html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="transform:rotate(${rotation}deg)">${iconHtml}</div>`,
                         className: '',
