@@ -194,6 +194,44 @@
                 opacity: 0;
             }
         }
+
+        /* ADS-B aircraft markers */
+        .adsb-aircraft-icon {
+            font-size: 20px;
+            text-shadow: 0 0 4px rgba(0,0,0,0.6);
+            transition: transform 0.3s ease;
+            cursor: pointer;
+        }
+        .adsb-aircraft-icon.ground {
+            opacity: 0.5;
+        }
+        .adsb-popup-table {
+            font-size: 12px;
+            border-collapse: collapse;
+            width: 100%;
+        }
+        .adsb-popup-table td {
+            padding: 2px 6px;
+        }
+        .adsb-popup-table td:first-child {
+            font-weight: 600;
+            color: #555;
+            white-space: nowrap;
+        }
+        .adsb-callsign-tooltip {
+            background: rgba(0,0,0,0.7);
+            border: none;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 5px;
+            border-radius: 3px;
+            box-shadow: none;
+            letter-spacing: 0.5px;
+        }
+        .adsb-callsign-tooltip::before {
+            border: none;
+        }
     </style>
 </head>
 
@@ -336,13 +374,180 @@
         const savedMapType = localStorage.getItem('divs_map_type') || '🗺️ Street';
         (baseMaps[savedMapType] || streetLayer).addTo(map);
 
-        // Add layer control selector (top-right)
-        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+        // ─── ADS-B aircraft overlay layer ─────────────────────────
+        const adsbLayerGroup = L.layerGroup();
+        const adsbEnabled = localStorage.getItem('divs_adsb_enabled') !== 'false';
+        if (adsbEnabled) adsbLayerGroup.addTo(map);
+
+        const overlayMaps = {
+            '✈️ ADS-B Aircraft': adsbLayerGroup
+        };
+
+        // Add layer control selector (top-right) with base + overlay
+        L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
         // Persist the user's map type selection
         map.on('baselayerchange', function(e) {
             localStorage.setItem('divs_map_type', e.name);
         });
+
+        // Persist ADS-B overlay toggle
+        map.on('overlayadd', function(e) {
+            if (e.name === '✈️ ADS-B Aircraft') {
+                localStorage.setItem('divs_adsb_enabled', 'true');
+                fetchAdsbData(); // Immediate refresh on enable
+            }
+        });
+        map.on('overlayremove', function(e) {
+            if (e.name === '✈️ ADS-B Aircraft') {
+                localStorage.setItem('divs_adsb_enabled', 'false');
+            }
+        });
+
+        // ─── ADS-B Live Aircraft Tracking ─────────────────────────
+        const adsbMarkers = {};  // hex -> { marker, tooltip }
+        let adsbFetchTimer = null;
+        const ADSB_POLL_INTERVAL = 10000; // 10 seconds
+        const ADSB_RADIUS_NM = 100;       // nautical miles
+
+        function getAltitudeColor(altBaro) {
+            if (altBaro === 'ground' || altBaro == null) return '#888';
+            const alt = parseInt(altBaro);
+            if (alt < 1000) return '#4ade80';    // green – low
+            if (alt < 10000) return '#facc15';   // yellow – medium
+            if (alt < 25000) return '#fb923c';   // orange – high
+            return '#f87171';                     // red – very high
+        }
+
+        function formatAltitude(altBaro) {
+            if (altBaro === 'ground') return 'Ground';
+            if (altBaro == null) return '—';
+            return parseInt(altBaro).toLocaleString() + ' ft';
+        }
+
+        function createAdsbPopup(ac) {
+            const callsign = (ac.flight || '').trim() || '—';
+            const reg = ac.r || '—';
+            const type = ac.t || '—';
+            const alt = formatAltitude(ac.alt_baro);
+            const gs = ac.gs != null ? Math.round(ac.gs) + ' kts' : '—';
+            const squawk = ac.squawk || '—';
+            const heading = ac.track != null ? Math.round(ac.track) + '°' : '—';
+            const vr = ac.baro_rate != null ? (ac.baro_rate > 0 ? '+' : '') + ac.baro_rate + ' ft/min' : '—';
+            const hex = ac.hex.toUpperCase();
+
+            return `<div style="min-width:180px">
+                <div style="font-weight:700;font-size:14px;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:3px">
+                    ✈️ ${callsign}
+                </div>
+                <table class="adsb-popup-table">
+                    <tr><td>ICAO</td><td>${hex}</td></tr>
+                    <tr><td>Reg</td><td>${reg}</td></tr>
+                    <tr><td>Type</td><td>${type}</td></tr>
+                    <tr><td>Altitude</td><td>${alt}</td></tr>
+                    <tr><td>Speed</td><td>${gs}</td></tr>
+                    <tr><td>Heading</td><td>${heading}</td></tr>
+                    <tr><td>V/S</td><td>${vr}</td></tr>
+                    <tr><td>Squawk</td><td>${squawk}</td></tr>
+                </table>
+            </div>`;
+        }
+
+        function updateAdsbMarkers(aircraftList) {
+            const seenHex = new Set();
+
+            aircraftList.forEach(ac => {
+                if (ac.lat == null || ac.lon == null) return;
+                seenHex.add(ac.hex);
+
+                const rotation = ac.track != null ? ac.track : 0;
+                const isGround = ac.alt_baro === 'ground';
+                const callsign = (ac.flight || '').trim();
+                const color = getAltitudeColor(ac.alt_baro);
+
+                if (adsbMarkers[ac.hex]) {
+                    // Update existing marker position & rotation
+                    const existing = adsbMarkers[ac.hex];
+                    existing.marker.setLatLng([ac.lat, ac.lon]);
+                    const el = existing.marker.getElement();
+                    if (el) {
+                        el.style.transform = el.style.transform.replace(/rotate\([^)]*\)/, '') + ` rotate(${rotation}deg)`;
+                        el.style.color = color;
+                    }
+                    existing.marker.setPopupContent(createAdsbPopup(ac));
+                    if (callsign) existing.marker.setTooltipContent(callsign);
+                } else {
+                    // Create new marker
+                    const icon = L.divIcon({
+                        html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="color:${color};transform:rotate(${rotation}deg)">✈</div>`,
+                        className: '',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    });
+
+                    const marker = L.marker([ac.lat, ac.lon], {
+                        icon: icon,
+                        interactive: true,
+                        zIndexOffset: isGround ? -1000 : (ac.alt_baro || 0)
+                    });
+
+                    marker.bindPopup(createAdsbPopup(ac), { maxWidth: 250 });
+
+                    if (callsign) {
+                        marker.bindTooltip(callsign, {
+                            permanent: false,
+                            direction: 'top',
+                            offset: [0, -12],
+                            className: 'adsb-callsign-tooltip'
+                        });
+                    }
+
+                    adsbLayerGroup.addLayer(marker);
+                    adsbMarkers[ac.hex] = { marker };
+                }
+            });
+
+            // Remove markers for aircraft no longer in the response
+            Object.keys(adsbMarkers).forEach(hex => {
+                if (!seenHex.has(hex)) {
+                    adsbLayerGroup.removeLayer(adsbMarkers[hex].marker);
+                    delete adsbMarkers[hex];
+                }
+            });
+        }
+
+        function fetchAdsbData() {
+            if (!map.hasLayer(adsbLayerGroup)) return;
+
+            const center = map.getCenter();
+            const url = `https://api.adsb.lol/v2/lat/${center.lat.toFixed(4)}/lon/${center.lng.toFixed(4)}/dist/${ADSB_RADIUS_NM}`;
+
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.ac && Array.isArray(data.ac)) {
+                        updateAdsbMarkers(data.ac);
+                    }
+                })
+                .catch(err => console.warn('ADS-B fetch error:', err));
+        }
+
+        // Start ADS-B polling
+        function startAdsbPolling() {
+            fetchAdsbData();
+            if (adsbFetchTimer) clearInterval(adsbFetchTimer);
+            adsbFetchTimer = setInterval(fetchAdsbData, ADSB_POLL_INTERVAL);
+        }
+
+        // Re-fetch when map is moved significantly
+        map.on('moveend', function() {
+            if (map.hasLayer(adsbLayerGroup)) {
+                fetchAdsbData();
+            }
+        });
+
+        // Start polling if enabled
+        if (adsbEnabled) startAdsbPolling();
 
         // Add Geocoder search control to map
         L.Control.geocoder({
