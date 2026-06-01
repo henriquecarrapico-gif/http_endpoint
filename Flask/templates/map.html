@@ -238,6 +238,19 @@
         .adsb-callsign-tooltip::before {
             border: none;
         }
+
+        .adsb-link {
+            display: inline-block;
+            margin-top: 6px;
+            color: #2563eb;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .adsb-link:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 
@@ -411,7 +424,8 @@
         });
 
         // ─── ADS-B Live Aircraft Tracking ─────────────────────────
-        const adsbMarkers = {};  // hex -> { marker, tooltip }
+        const adsbMarkers = {};  // hex -> { marker }
+        let activeTrackPolyline = null;  // currently displayed OpenSky track
         let adsbFetchTimer = null;
         const ADSB_POLL_INTERVAL = 10000; // 10 seconds
         const ADSB_RADIUS_NM = 100;       // nautical miles
@@ -431,6 +445,54 @@
             return parseInt(altBaro).toLocaleString() + ' ft';
         }
 
+        // SVG aircraft silhouettes (top-down view, pointing up)
+        const AIRCRAFT_SVGS = {
+            // Single-engine light aircraft
+            light: '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M16 2 L14 10 L4 14 L4 17 L14 15 L14 25 L10 28 L10 30 L16 28 L22 30 L22 28 L18 25 L18 15 L28 17 L28 14 L18 10 Z"/></svg>',
+            // Twin-engine prop
+            twin: '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M16 1 L14 9 L8 9 L6 12 L6 15 L14 13 L14 25 L10 28 L10 30 L16 28 L22 30 L22 28 L18 25 L18 13 L26 15 L26 12 L24 9 L18 9 Z"/></svg>',
+            // Narrow-body jet (A320, B737 size)
+            jet: '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M16 1 L14.5 8 L3 15 L3 17 L14.5 14 L14.5 25 L10 28 L10 30 L16 27.5 L22 30 L22 28 L17.5 25 L17.5 14 L29 17 L29 15 L17.5 8 Z"/></svg>',
+            // Wide-body / heavy jet (B777, A330, B747)
+            heavy: '<svg viewBox="0 0 32 32" width="28" height="28"><path d="M16 0 L14 7 L1 14 L1 17 L14 13 L14 24 L9 27 L9 30 L16 27 L23 30 L23 27 L18 24 L18 13 L31 17 L31 14 L18 7 Z"/></svg>',
+            // Helicopter
+            heli: '<svg viewBox="0 0 32 32" width="24" height="24"><path d="M16 4 L14 4 L14 10 L12 10 L10 13 L10 20 L12 22 L14 22 L14 26 L11 26 L11 28 L21 28 L21 26 L18 26 L18 22 L20 22 L22 20 L22 13 L20 10 L18 10 L18 4 Z M8 8 L8 10 L24 10 L24 8 Z"/></svg>',
+            // Ground vehicle
+            ground: '<svg viewBox="0 0 32 32" width="18" height="18"><rect x="8" y="8" width="16" height="16" rx="3"/></svg>',
+        };
+
+        function getAircraftSvg(category, typeCode) {
+            const t = (typeCode || '').toUpperCase();
+            const cat = (category || '').toUpperCase();
+
+            // Helicopter types
+            if (cat === 'A7' || /^(H[0-9]|EC[0-9]|AS[0-9]|R22|R44|R66|S[0-9]{2}|B[0-9]{3}H|A109|AW|NH90|LYNX|PUMA|BELL|UH|AH|CH[0-9]|MI[0-9]|KA[0-9])/.test(t)) {
+                return AIRCRAFT_SVGS.heli;
+            }
+            // Ground vehicles
+            if (cat.startsWith('B') || cat === 'C3') {
+                return AIRCRAFT_SVGS.ground;
+            }
+            // Heavy / wide-body
+            if (cat === 'A5' || /^(B74|B77|B78|A33|A34|A35|A38|A30|B76|IL96|MD11|DC10|C5|AN12|C17|AN22|AN22|A400)/.test(t)) {
+                return AIRCRAFT_SVGS.heavy;
+            }
+            // Large / narrow-body jet
+            if (cat === 'A3' || cat === 'A4' || /^(B73|B38|A31|A32|A2[0-2]|E[0-9]{3}|CRJ|MD[0-9]|B71|B72|DC9|F[0-9]{2}|C130|P3|P8|GLF|CL[0-9]|LJ[0-9]|FA[0-9]|C56|C68|C25|GA[0-9]|BE4|C750|H25)/.test(t)) {
+                return AIRCRAFT_SVGS.jet;
+            }
+            // Small twin-engine
+            if (cat === 'A2' || /^(BE[0-9]|C[0-4][0-9]{2}|PA[0-9]{2}T|DHC|AT[0-9]|SF34|J32|D328|L410|SW[0-9]|P06T|P18|BN2)/.test(t)) {
+                return AIRCRAFT_SVGS.twin;
+            }
+            // Light single-engine
+            if (cat === 'A1' || /^(C1[0-9]{2}|C20[0-9]|PA[0-9]{2}$|DR[0-9]|P28|PA28|PA32|AA[0-9]|DA[0-9]|SR2[0-2]|RV[0-9]|M20|TB[0-9])/.test(t)) {
+                return AIRCRAFT_SVGS.light;
+            }
+            // Default: jet silhouette
+            return AIRCRAFT_SVGS.jet;
+        }
+
         function createAdsbPopup(ac) {
             const callsign = (ac.flight || '').trim() || '—';
             const reg = ac.r || '—';
@@ -441,6 +503,7 @@
             const heading = ac.track != null ? Math.round(ac.track) + '°' : '—';
             const vr = ac.baro_rate != null ? (ac.baro_rate > 0 ? '+' : '') + ac.baro_rate + ' ft/min' : '—';
             const hex = ac.hex.toUpperCase();
+            const globeUrl = `https://globe.adsb.lol/?icao=${ac.hex}`;
 
             return `<div style="min-width:180px">
                 <div style="font-weight:700;font-size:14px;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:3px">
@@ -456,7 +519,37 @@
                     <tr><td>V/S</td><td>${vr}</td></tr>
                     <tr><td>Squawk</td><td>${squawk}</td></tr>
                 </table>
+                <a class="adsb-link" href="${globeUrl}" target="_blank" rel="noopener">🌐 Full history on adsb.lol</a>
             </div>`;
+        }
+
+        function clearTrack() {
+            if (activeTrackPolyline) {
+                adsbLayerGroup.removeLayer(activeTrackPolyline);
+                activeTrackPolyline = null;
+            }
+        }
+
+        function fetchAndShowTrack(icao24) {
+            clearTrack();
+            fetch(`/api/adsb/track/${icao24}`)
+                .then(res => {
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    return res.json();
+                })
+                .then(data => {
+                    if (!data.path || !Array.isArray(data.path) || data.path.length < 2) return;
+                    // path entries: [timestamp, lat, lon, altitude_m, track, on_ground]
+                    const latlngs = data.path.map(p => [p[1], p[2]]);
+                    activeTrackPolyline = L.polyline(latlngs, {
+                        color: '#3b82f6',
+                        weight: 3,
+                        opacity: 0.8,
+                        dashArray: '8, 5'
+                    });
+                    adsbLayerGroup.addLayer(activeTrackPolyline);
+                })
+                .catch(err => console.warn('Track fetch error:', err));
         }
 
         function updateAdsbMarkers(aircraftList) {
@@ -478,17 +571,21 @@
                     const el = existing.marker.getElement();
                     if (el) {
                         el.style.transform = el.style.transform.replace(/rotate\([^)]*\)/, '') + ` rotate(${rotation}deg)`;
-                        el.style.color = color;
+                        const svg = el.querySelector('svg path, svg rect');
+                        if (svg) svg.setAttribute('fill', color);
                     }
                     existing.marker.setPopupContent(createAdsbPopup(ac));
                     if (callsign) existing.marker.setTooltipContent(callsign);
                 } else {
-                    // Create new marker
+                    // Create new marker with type-specific SVG icon
+                    const svgHtml = getAircraftSvg(ac.category, ac.t);
+                    const iconHtml = svgHtml.replace('<svg ', `<svg style="fill:${color};filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))" `);
+                    const iconSize = ac.category === 'A5' || (ac.t && /^(B74|B77|B78|A33|A34|A35|A38)/.test(ac.t.toUpperCase())) ? [28, 28] : [24, 24];
                     const icon = L.divIcon({
-                        html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="color:${color};transform:rotate(${rotation}deg)">✈</div>`,
+                        html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="transform:rotate(${rotation}deg)">${iconHtml}</div>`,
                         className: '',
-                        iconSize: [20, 20],
-                        iconAnchor: [10, 10]
+                        iconSize: iconSize,
+                        iconAnchor: [iconSize[0] / 2, iconSize[1] / 2]
                     });
 
                     const marker = L.marker([ac.lat, ac.lon], {
@@ -507,6 +604,11 @@
                             className: 'adsb-callsign-tooltip'
                         });
                     }
+
+                    // Fetch and show track on click
+                    marker.on('click', function () {
+                        fetchAndShowTrack(ac.hex);
+                    });
 
                     adsbLayerGroup.addLayer(marker);
                     adsbMarkers[ac.hex] = { marker };
@@ -554,6 +656,11 @@
 
         // Start polling if enabled
         if (adsbEnabled) startAdsbPolling();
+
+        // Clear aircraft track when popup is closed
+        map.on('popupclose', function () {
+            clearTrack();
+        });
 
         // Add Geocoder search control to map
         L.Control.geocoder({

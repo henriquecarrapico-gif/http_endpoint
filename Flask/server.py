@@ -636,5 +636,20 @@ def adsb_proxy():
         app.logger.error(f"ADS-B proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route("/api/adsb/track/<icao24>", methods=["GET"])
+def adsb_track_proxy(icao24):
+    """Proxy to OpenSky Network /tracks/all endpoint for aircraft trail data."""
+    url = f"https://opensky-network.org/api/tracks/all?icao24={icao24.lower()}&time=0"
+    try:
+        with urlopen(url, timeout=15) as resp:
+            data = json.loads(resp.read().decode())
+        return jsonify(data), 200
+    except URLError as e:
+        app.logger.error(f"OpenSky track fetch failed for {icao24}: {e}")
+        return jsonify({"status": "error", "message": "Failed to fetch track data"}), 502
+    except Exception as e:
+        app.logger.error(f"OpenSky track proxy error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000)
