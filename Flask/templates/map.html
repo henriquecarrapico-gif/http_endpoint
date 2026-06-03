@@ -450,18 +450,18 @@
         const AIRCRAFT_SVGS = {};
         const SVG_FILE_MAP = {
             ultralight: 'mono propeller ultralight',
-            light:      'jet ryanair',
-            bizjet:     'jet',
-            jet2:       'jet2',
-            jet:        'airliner 2 engines',
-            jet_short:  'airliner 2 engines short',
-            jet_shorter:'airliner 2 engines shorter',
-            jet_long:   'airliner 2 engines long',
-            heavy:      'airliner 4 engine',
-            fighter:    'fighter',
-            bomber:     'bomber jet',
-            heli:       'helicoper',
-            fire:       'fire',
+            light: 'jet ryanair',
+            bizjet: 'jet',
+            jet2: 'jet2',
+            jet: 'airliner 2 engines',
+            jet_short: 'airliner 2 engines short',
+            jet_shorter: 'airliner 2 engines shorter',
+            jet_long: 'airliner 2 engines long',
+            heavy: 'airliner 4 engine',
+            fighter: 'fighter',
+            bomber: 'bomber jet',
+            heli: 'helicoper',
+            fire: 'fire',
         };
         // Fallback inline SVG while loading
         const FALLBACK_SVG = '<svg viewBox="0 0 32 32"><path d="M16 1 L14.5 8 L3 15 L3 17 L14.5 14 L14.5 25 L10 28 L10 30 L16 27.5 L22 30 L22 28 L17.5 25 L17.5 14 L29 17 L29 15 L17.5 8 Z"/></svg>';
@@ -477,19 +477,19 @@
         const SVG_BASE_SIZE = 28;
         const SVG_GLOBAL_SCALE = 0.35;
         const SVG_ICON_SCALES = {
-            ultralight    : 46.95,  // Ultralight / Glider
-            light         : 27.25,  // Light GA / Prop
-            jet_short     : 4.95,   // Airliner 2-Eng Short
-            bizjet        : 50.00,  // Business Jet
-            jet           : 25.00,  // Airliner 2-Eng
-            jet2          : 50.00,  // Small Jet
-            jet_shorter   : 5.10,   // Airliner 2-Eng Shorter
-            jet_long      : 3.85,   // Airliner 2-Eng Long
-            heavy         : 33.40,  // Heavy 4-Engine
-            fighter       : 50.00,  // Fighter Jet
-            bomber        : 33.60,  // Bomber / Stealth
-            heli          : 17.80,  // Helicopter
-            fire          : 50.00,  // Fire / Emergency
+            ultralight: 46.95,  // Ultralight / Glider
+            light: 27.25,  // Light GA / Prop
+            jet_short: 4.95,   // Airliner 2-Eng Short
+            bizjet: 50.00,  // Business Jet
+            jet: 25.00,  // Airliner 2-Eng
+            jet2: 50.00,  // Small Jet
+            jet_shorter: 5.10,   // Airliner 2-Eng Shorter
+            jet_long: 3.85,   // Airliner 2-Eng Long
+            heavy: 33.40,  // Heavy 4-Engine
+            fighter: 50.00,  // Fighter Jet
+            bomber: 33.60,  // Bomber / Stealth
+            heli: 17.80,  // Helicopter
+            fire: 50.00,  // Fire / Emergency
         };
 
         function getIconSize(key) {
@@ -497,8 +497,23 @@
             return [px, px];
         }
 
+        // ─── Manual ICAO hex overrides ────────────────────────────
+        // Add ICAO hex codes here to force a specific icon type.
+        // Key = lowercase hex, Value = SVG key from SVG_FILE_MAP.
+        const ICAO_TYPE_OVERRIDES = {
+            '34858d': 'ultralight',  // FSMD3K
+            // '3c0000': 'heli',     // Example: force a specific hex to helicopter
+        };
+
         // Returns the SVG_FILE_MAP key for an aircraft based on category + type code
-        function getAircraftTypeKey(category, typeCode) {
+        // Optional: hex (ICAO address) for manual overrides, gs (ground speed in kts)
+        function getAircraftTypeKey(category, typeCode, hex, gs) {
+            // 1. Check manual ICAO hex overrides first
+            if (hex) {
+                const override = ICAO_TYPE_OVERRIDES[hex.toLowerCase()];
+                if (override) return override;
+            }
+
             const t = (typeCode || '').toUpperCase();
             const cat = (category || '').toUpperCase();
 
@@ -550,12 +565,19 @@
             if (cat === 'A0' || cat === 'C1' || cat === 'C2' || /^(ULM|PARA|GLAS|GLID|ASK|LS[0-9]|DG[0-9]|VENT)/.test(t)) {
                 return 'ultralight';
             }
+            // Speed-based fallback for unknown aircraft (no type code, no category)
+            if (!t && !cat && gs != null) {
+                if (gs < 95) return 'ultralight';  // Very slow: likely ultralight/paramotor
+                if (gs < 120) return 'light';       // Slow: likely light GA
+                if (gs < 200) return 'jet2';        // Moderate: likely small twin/commuter
+                if (gs < 300) return 'jet_shorter';  // Regional jet speeds
+            }
             // Default: standard airliner
             return 'jet';
         }
 
-        function getAircraftSvg(category, typeCode) {
-            const key = getAircraftTypeKey(category, typeCode);
+        function getAircraftSvg(category, typeCode, hex, gs) {
+            const key = getAircraftTypeKey(category, typeCode, hex, gs);
             return AIRCRAFT_SVGS[key] || FALLBACK_SVG;
         }
 
@@ -644,9 +666,9 @@
                     if (callsign) existing.marker.setTooltipContent(callsign);
                 } else {
                     // Create new marker with type-specific SVG icon
-                    const svgHtml = getAircraftSvg(ac.category, ac.t);
+                    const svgHtml = getAircraftSvg(ac.category, ac.t, ac.hex, ac.gs);
                     const iconHtml = svgHtml.replace('<svg ', `<svg style="fill:${color};width:100%;height:100%;filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))" `);
-                    const typeKey = getAircraftTypeKey(ac.category, ac.t);
+                    const typeKey = getAircraftTypeKey(ac.category, ac.t, ac.hex, ac.gs);
                     const iconSize = getIconSize(typeKey);
                     const icon = L.divIcon({
                         html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="transform:rotate(${rotation}deg)">${iconHtml}</div>`,
