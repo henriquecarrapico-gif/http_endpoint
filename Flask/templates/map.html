@@ -823,12 +823,14 @@
                     existing.acData = ac; // keep latest data
                     const el = existing.marker.getElement();
                     if (el) {
-                        el.style.transform = el.style.transform.replace(/rotate\([^)]*\)/, '') + ` rotate(${rotation}deg)`;
-                        const svgEl = el.querySelector('svg');
-                        if (svgEl) {
-                            const pathEl = svgEl.querySelector('path');
-                            if (pathEl) pathEl.setAttribute('fill', color);
+                        // Rotate the inner icon div, NOT the Leaflet marker container
+                        // (Leaflet manages container's transform for translate3d positioning)
+                        const innerDiv = el.querySelector('.adsb-aircraft-icon');
+                        if (innerDiv) {
+                            innerDiv.style.transform = `rotate(${rotation}deg)`;
                         }
+                        const pathEl = el.querySelector('svg path');
+                        if (pathEl) pathEl.setAttribute('fill', color);
                     }
                     if (callsign) existing.marker.setTooltipContent(callsign);
                     // Update detail panel if this is the selected aircraft
