@@ -228,7 +228,7 @@
             border: none;
         }
 
-        /* ─── ADS-B Detail Panel (globe.adsb.lol style) ─── */
+        /* ─── ADS-B Detail Panel (adsb.lol style) ─── */
         #adsb-detail-panel {
             position: absolute;
             top: 0;
@@ -239,11 +239,11 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             z-index: 1001;
-            transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            box-shadow: 4px 0 24px rgba(0,0,0,0.5);
-            border-right: 1px solid rgba(255,255,255,0.06);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
             overflow-y: auto;
             overflow-x: hidden;
             font-size: 12px;
@@ -256,7 +256,7 @@
 
         .adp-header {
             padding: 12px 14px 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
         }
 
@@ -276,7 +276,7 @@
         }
 
         .adp-close:hover {
-            background: rgba(255,255,255,0.1);
+            background: rgba(255, 255, 255, 0.1);
             color: #f1f5f9;
         }
 
@@ -294,15 +294,15 @@
         }
 
         .adp-section-title {
-            background: rgba(255,255,255,0.04);
+            background: rgba(255, 255, 255, 0.04);
             padding: 4px 14px;
             font-size: 10px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 1.2px;
             color: #64748b;
-            border-top: 1px solid rgba(255,255,255,0.05);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .adp-section {
@@ -313,7 +313,7 @@
             display: flex;
             justify-content: space-between;
             padding: 3px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.03);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
         }
 
         .adp-row:last-child {
@@ -358,7 +358,7 @@
 
         .adp-links {
             padding: 8px 14px;
-            border-top: 1px solid rgba(255,255,255,0.06);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .adp-links a {
@@ -375,6 +375,245 @@
             text-decoration: underline;
             color: #60a5fa;
         }
+
+        /* ─── Right-click Context Menu ─── */
+        .map-context-menu {
+            position: absolute;
+            z-index: 10000;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 10px;
+            padding: 6px 0;
+            min-width: 180px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+            font-family: 'Inter', sans-serif;
+            animation: ctxFadeIn 0.12s ease-out;
+        }
+
+        @keyframes ctxFadeIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .ctx-menu-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 16px;
+            cursor: pointer;
+            color: #e2e8f0;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.1s;
+            user-select: none;
+        }
+
+        .ctx-menu-item:hover {
+            background: rgba(59, 130, 246, 0.18);
+        }
+
+        .ctx-menu-item .ctx-icon {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .ctx-menu-separator {
+            height: 1px;
+            background: rgba(255,255,255,0.06);
+            margin: 4px 8px;
+        }
+
+        .ctx-menu-coords {
+            padding: 4px 16px 6px;
+            font-size: 10px;
+            color: #475569;
+            font-family: 'Inter', monospace;
+            letter-spacing: 0.3px;
+        }
+
+        /* ─── Modern Form Popup (replaces Leaflet default) ─── */
+        .modern-form-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 10001;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: overlayIn 0.15s ease-out;
+        }
+
+        @keyframes overlayIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modern-form-card {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 0;
+            width: 340px;
+            max-width: 90vw;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+            font-family: 'Inter', sans-serif;
+            color: #e2e8f0;
+            animation: cardIn 0.2s ease-out;
+            overflow: hidden;
+        }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: scale(0.92) translateY(12px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .mf-header {
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .mf-title {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+
+        .mf-close {
+            color: #64748b;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            transition: color 0.15s;
+        }
+
+        .mf-close:hover { color: #f87171; }
+
+        .mf-type-toggle {
+            display: flex;
+            padding: 12px 20px 0;
+            gap: 8px;
+        }
+
+        .mf-type-btn {
+            flex: 1;
+            padding: 8px 0;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .mf-type-btn.active {
+            background: rgba(59, 130, 246, 0.18);
+            border-color: rgba(59, 130, 246, 0.4);
+            color: #60a5fa;
+        }
+
+        .mf-type-btn:hover:not(.active) {
+            border-color: rgba(255,255,255,0.2);
+            color: #cbd5e1;
+        }
+
+        .mf-body {
+            padding: 16px 20px;
+        }
+
+        .mf-field {
+            margin-bottom: 12px;
+        }
+
+        .mf-field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin-bottom: 4px;
+        }
+
+        .mf-field input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: rgba(255,255,255,0.04);
+            color: #e2e8f0;
+            font-size: 13px;
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: border-color 0.15s;
+            box-sizing: border-box;
+        }
+
+        .mf-field input:focus {
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .mf-field input::placeholder {
+            color: #475569;
+        }
+
+        .mf-actions {
+            padding: 0 20px 16px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .mf-btn-save {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            color: white;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: opacity 0.15s;
+        }
+
+        .mf-btn-save:hover { opacity: 0.9; }
+
+        .mf-btn-cancel {
+            padding: 10px 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s;
+        }
+
+        .mf-btn-cancel:hover {
+            border-color: rgba(255,255,255,0.2);
+            color: #e2e8f0;
+        }
     </style>
 </head>
 
@@ -383,7 +622,7 @@
     <div id="map-container">
         <div id="map"></div>
 
-        <!-- ADS-B Aircraft Detail Panel (globe.adsb.lol style) -->
+        <!-- ADS-B Aircraft Detail Panel (adsb.lol style) -->
         <div id="adsb-detail-panel">
             <div class="adp-header">
                 <div class="adp-close" id="adp-close-btn">✕</div>
@@ -393,10 +632,14 @@
 
             <div class="adp-section-title">Registration</div>
             <div class="adp-section">
-                <div class="adp-row"><span class="adp-label">ICAO Hex</span><span class="adp-value" id="adp-hex">—</span></div>
-                <div class="adp-row"><span class="adp-label">Reg.</span><span class="adp-value" id="adp-reg">—</span></div>
-                <div class="adp-row"><span class="adp-label">Type</span><span class="adp-value" id="adp-type">—</span></div>
-                <div class="adp-row"><span class="adp-label">Squawk</span><span class="adp-value" id="adp-squawk">—</span></div>
+                <div class="adp-row"><span class="adp-label">ICAO Hex</span><span class="adp-value"
+                        id="adp-hex">—</span></div>
+                <div class="adp-row"><span class="adp-label">Reg.</span><span class="adp-value" id="adp-reg">—</span>
+                </div>
+                <div class="adp-row"><span class="adp-label">Type</span><span class="adp-value" id="adp-type">—</span>
+                </div>
+                <div class="adp-row"><span class="adp-label">Squawk</span><span class="adp-value"
+                        id="adp-squawk">—</span></div>
             </div>
 
             <div class="adp-section-title">Route</div>
@@ -404,24 +647,37 @@
                 <span class="adp-route-loading" id="adp-route-text">Click an aircraft...</span>
             </div>
 
+            <div id="adp-photo-container" style="padding: 0; display: none;">
+                <img id="adp-photo" src="" alt="Aircraft photo" style="width: 100%; display: block; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <div id="adp-photo-credit" style="padding: 2px 14px 4px; font-size: 9px; color: #475569;"></div>
+            </div>
+
             <div class="adp-section-title">Spatial</div>
             <div class="adp-section">
-                <div class="adp-row"><span class="adp-label">Groundspeed</span><span class="adp-value" id="adp-speed">—</span></div>
-                <div class="adp-row"><span class="adp-label">Baro. Altitude</span><span class="adp-value" id="adp-alt">—</span></div>
-                <div class="adp-row"><span class="adp-label">Vert. Rate</span><span class="adp-value" id="adp-vrate">—</span></div>
-                <div class="adp-row"><span class="adp-label">Track</span><span class="adp-value" id="adp-track">—</span></div>
-                <div class="adp-row"><span class="adp-label">Position</span><span class="adp-value" id="adp-pos">—</span></div>
+                <div class="adp-row"><span class="adp-label">Groundspeed</span><span class="adp-value"
+                        id="adp-speed">—</span></div>
+                <div class="adp-row"><span class="adp-label">Baro. Altitude</span><span class="adp-value"
+                        id="adp-alt">—</span></div>
+                <div class="adp-row"><span class="adp-label">Vert. Rate</span><span class="adp-value"
+                        id="adp-vrate">—</span></div>
+                <div class="adp-row"><span class="adp-label">Track</span><span class="adp-value" id="adp-track">—</span>
+                </div>
+                <div class="adp-row"><span class="adp-label">Position</span><span class="adp-value"
+                        id="adp-pos">—</span></div>
             </div>
 
             <div class="adp-section-title">Signal</div>
             <div class="adp-section">
-                <div class="adp-row"><span class="adp-label">Source</span><span class="adp-value" id="adp-source">—</span></div>
-                <div class="adp-row"><span class="adp-label">RSSI</span><span class="adp-value" id="adp-rssi">—</span></div>
-                <div class="adp-row"><span class="adp-label">Messages</span><span class="adp-value" id="adp-msgs">—</span></div>
+                <div class="adp-row"><span class="adp-label">Source</span><span class="adp-value"
+                        id="adp-source">—</span></div>
+                <div class="adp-row"><span class="adp-label">RSSI</span><span class="adp-value" id="adp-rssi">—</span>
+                </div>
+                <div class="adp-row"><span class="adp-label">Messages</span><span class="adp-value"
+                        id="adp-msgs">—</span></div>
             </div>
 
             <div class="adp-links">
-                <a id="adp-globe-link" href="#" target="_blank" rel="noopener">🌐 View on globe.adsb.lol</a>
+                <a id="adp-globe-link" href="#" target="_blank" rel="noopener">🌐 View on adsb.lol</a>
             </div>
         </div>
 
@@ -652,6 +908,30 @@
         function showDetailPanel(ac) {
             selectedAcData = ac;
             const panel = document.getElementById('adsb-detail-panel');
+
+            // Update all data fields
+            updateDetailPanelData(ac);
+
+            // Reset route to loading
+            document.getElementById('adp-route-text').textContent = 'Loading route...';
+            document.getElementById('adp-route-text').className = 'adp-route-loading';
+
+            // Reset photo
+            document.getElementById('adp-photo-container').style.display = 'none';
+            document.getElementById('adp-photo').src = '';
+            document.getElementById('adp-photo-credit').textContent = '';
+
+            panel.classList.add('open');
+
+            // Fetch route info (only on initial click, not on refresh)
+            fetchRoute(ac);
+
+            // Fetch aircraft photo from planespotters.net
+            fetchAircraftPhoto(ac.hex);
+        }
+
+        // Update panel data without re-fetching route or photo
+        function updateDetailPanelData(ac) {
             const callsign = (ac.flight || '').trim() || '—';
             const reg = ac.r || '—';
             const type = ac.t || '—';
@@ -680,14 +960,31 @@
             document.getElementById('adp-source').textContent = source;
             document.getElementById('adp-rssi').textContent = rssi;
             document.getElementById('adp-msgs').textContent = msgs;
-            document.getElementById('adp-globe-link').href = `https://globe.adsb.lol/?icao=${ac.hex}`;
-            document.getElementById('adp-route-text').textContent = 'Loading route...';
-            document.getElementById('adp-route-text').className = 'adp-route-loading';
+            document.getElementById('adp-globe-link').href = `https://adsb.lol/?icao=${ac.hex}`;
+        }
 
-            panel.classList.add('open');
-
-            // Fetch route info
-            fetchRoute(ac);
+        // Fetch aircraft photo from planespotters.net public API
+        function fetchAircraftPhoto(hex) {
+            fetch(`https://api.planespotters.net/pub/photos/hex/${hex}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!selectedAcData || selectedAcData.hex !== hex) return;
+                    if (data.photos && data.photos.length > 0) {
+                        const photo = data.photos[0];
+                        const imgUrl = photo.thumbnail_large?.src || photo.thumbnail?.src;
+                        if (imgUrl) {
+                            const imgEl = document.getElementById('adp-photo');
+                            imgEl.src = imgUrl;
+                            document.getElementById('adp-photo-container').style.display = 'block';
+                            const credit = photo.photographer || '';
+                            const link = photo.link || '';
+                            document.getElementById('adp-photo-credit').innerHTML = credit
+                                ? `📷 <a href="${link}" target="_blank" rel="noopener" style="color: #64748b; text-decoration: none;">${credit}</a>`
+                                : '';
+                        }
+                    }
+                })
+                .catch(() => { /* silently fail if no photo */ });
         }
 
         function hideDetailPanel() {
@@ -724,55 +1021,55 @@
                     planes: [{ callsign: callsign, lat: ac.lat, lng: ac.lon }]
                 })
             })
-            .then(res => res.json())
-            .then(data => {
-                if (!selectedAcData || selectedAcData.hex !== ac.hex) return; // stale
+                .then(res => res.json())
+                .then(data => {
+                    if (!selectedAcData || selectedAcData.hex !== ac.hex) return; // stale
 
-                // Parse the route response
-                // Format: array of objects with _airports array [{icao, iata, name, lat, lon}]
-                let routeStr = null;
-                let destLat = null, destLon = null;
+                    // Parse the route response
+                    // Format: array of objects with _airports array [{icao, iata, name, lat, lon}]
+                    let routeStr = null;
+                    let destLat = null, destLon = null;
 
-                if (Array.isArray(data) && data.length > 0 && data[0]._airports) {
-                    const airports = data[0]._airports;
-                    if (airports.length >= 2) {
-                        const orig = airports[0];
-                        const dest = airports[airports.length - 1];
-                        routeStr = `<span class="adp-route-airports">${orig.icao || orig.iata}<span class="adp-route-arrow"> → </span>${dest.icao || dest.iata}</span>`;
-                        if (dest.lat != null && dest.lon != null) {
-                            destLat = dest.lat;
-                            destLon = dest.lon;
+                    if (Array.isArray(data) && data.length > 0 && data[0]._airports) {
+                        const airports = data[0]._airports;
+                        if (airports.length >= 2) {
+                            const orig = airports[0];
+                            const dest = airports[airports.length - 1];
+                            routeStr = `<span class="adp-route-airports">${orig.icao || orig.iata}<span class="adp-route-arrow"> → </span>${dest.icao || dest.iata}</span>`;
+                            if (dest.lat != null && dest.lon != null) {
+                                destLat = dest.lat;
+                                destLon = dest.lon;
+                            }
+                        } else if (airports.length === 1) {
+                            routeStr = airports[0].icao || airports[0].iata || 'Unknown';
                         }
-                    } else if (airports.length === 1) {
-                        routeStr = airports[0].icao || airports[0].iata || 'Unknown';
                     }
-                }
 
-                const routeEl = document.getElementById('adp-route-text');
-                if (routeStr) {
-                    routeEl.innerHTML = routeStr;
-                    routeEl.className = '';
-                } else {
-                    routeEl.textContent = 'No route data';
-                    routeEl.className = 'adp-route-loading';
-                }
+                    const routeEl = document.getElementById('adp-route-text');
+                    if (routeStr) {
+                        routeEl.innerHTML = routeStr;
+                        routeEl.className = '';
+                    } else {
+                        routeEl.textContent = 'No route data';
+                        routeEl.className = 'adp-route-loading';
+                    }
 
-                // Draw dotted line to destination
-                clearRoutePolyline();
-                if (destLat != null && destLon != null && ac.lat != null && ac.lon != null) {
-                    routePolyline = L.polyline(
-                        [[ac.lat, ac.lon], [destLat, destLon]],
-                        { color: '#9ca3af', weight: 1.5, opacity: 0.6, dashArray: '4, 6', interactive: false }
-                    );
-                    adsbLayerGroup.addLayer(routePolyline);
-                }
-            })
-            .catch(() => {
-                if (selectedAcData && selectedAcData.hex === ac.hex) {
-                    document.getElementById('adp-route-text').textContent = 'Route unavailable';
-                    document.getElementById('adp-route-text').className = 'adp-route-loading';
-                }
-            });
+                    // Draw dotted line to destination
+                    clearRoutePolyline();
+                    if (destLat != null && destLon != null && ac.lat != null && ac.lon != null) {
+                        routePolyline = L.polyline(
+                            [[ac.lat, ac.lon], [destLat, destLon]],
+                            { color: '#9ca3af', weight: 1.5, opacity: 0.6, dashArray: '4, 6', interactive: false }
+                        );
+                        adsbLayerGroup.addLayer(routePolyline);
+                    }
+                })
+                .catch(() => {
+                    if (selectedAcData && selectedAcData.hex === ac.hex) {
+                        document.getElementById('adp-route-text').textContent = 'Route unavailable';
+                        document.getElementById('adp-route-text').className = 'adp-route-loading';
+                    }
+                });
         }
 
         function clearTrack() {
@@ -833,9 +1130,11 @@
                         if (pathEl) pathEl.setAttribute('fill', color);
                     }
                     if (callsign) existing.marker.setTooltipContent(callsign);
-                    // Update detail panel if this is the selected aircraft
+                    // Update detail panel DATA only if this is the selected aircraft
+                    // (does NOT re-fetch route or photo — only updates position/speed/alt)
                     if (selectedAcData && selectedAcData.hex === ac.hex) {
-                        showDetailPanel(ac);
+                        selectedAcData = ac;
+                        updateDetailPanelData(ac);
                     }
                 } else {
                     // Create new marker with tar1090-style embedded SVG
@@ -2241,133 +2540,234 @@
             const defaultRange = isEdit ? editData.range : '';
             const defaultAltitude = isEdit ? (editData.altitude || 0) : 0;
 
-            // Radio toggle UI for new components
-            const typeSelectionUI = !isEdit ? `
-            <div style="margin-bottom: 10px;">
-                <label><input type="radio" name="itemType" value="node" checked onchange="document.getElementById('idLabel').innerText='Device EUI:'"> Node</label>
-                <label style="margin-left: 15px;"><input type="radio" name="itemType" value="gateway" onchange="document.getElementById('idLabel').innerText='Gateway ID:'"> Gateway</label>
-            </div>
-        ` : `<div style="margin-bottom: 10px; font-weight: bold; color: ${defaultType === 'node' ? 'purple' : 'green'};">${defaultType === 'node' ? 'Node' : 'Gateway'}</div>`;
+            // ─── Modern Form Modal (glassmorphic overlay) ───
+            const selectedType = defaultType || 'node';
+            const idLabel = selectedType === 'node' ? 'Device EUI' : 'Gateway ID';
+            const idPlaceholder = selectedType === 'node' ? 'e.g. 0011223344556677' : 'e.g. my-gateway-01';
 
-            const popupContent = `
-            <div style="font-family: Arial, sans-serif; font-size: 14px;">
-                <h3 style="margin-top: 0;">${isEdit ? 'Edit Map Item' : 'Add to Map'}</h3>
-                ${typeSelectionUI}
+            // Remove any existing overlay
+            const existingOverlay = document.querySelector('.modern-form-overlay');
+            if (existingOverlay) existingOverlay.remove();
 
-                ${!isEdit ? `
-                <label><b id="idLabel">Device EUI:</b></label><br>
-                <input type="text" id="itemId" placeholder="e.g. 0011223344556677" style="width: 100%; margin-bottom: 10px;" value="${defaultId}"><br>
-                ` : `<div style="margin-bottom: 10px;"><b>ID:</b> ${defaultId}</div>`}
-                
-                <label><b>Name:</b></label><br>
-                <input type="text" id="itemName" placeholder="e.g. Campus Roof" style="width: 100%; margin-bottom: 10px;" value="${defaultName}"><br>
-                
-                <label><b>Range (meters):</b></label><br>
-                <input type="number" id="itemRange" placeholder="e.g. 5000" style="width: 100%; margin-bottom: 10px;" value="${defaultRange}"><br>
+            const overlay = document.createElement('div');
+            overlay.className = 'modern-form-overlay';
+            overlay.innerHTML = `
+                <div class="modern-form-card">
+                    <div class="mf-header">
+                        <div class="mf-title">${isEdit ? '✏️ Edit Item' : '📍 Place on Map'}</div>
+                        <div class="mf-close" id="mf-close-btn">✕</div>
+                    </div>
 
-                <label><b>Altitude (meters, optional):</b></label><br>
-                <input type="number" id="itemAltitude" placeholder="e.g. 10" style="width: 100%; margin-bottom: 15px;" value="${defaultAltitude}"><br>
-                
-                <button id="saveItemBtn" style="padding: 5px 10px; cursor: pointer;">${isEdit ? 'Save Changes' : 'Save Item'}</button>
-                ${isEdit ? `<button onclick="window.currentEditId = null; window.currentEditType = null; map.closePopup();" style="padding: 5px 10px; cursor: pointer; float:right;">Cancel</button>` : ''}
-            </div>
-        `;
+                    ${!isEdit ? `
+                    <div class="mf-type-toggle">
+                        <button class="mf-type-btn ${selectedType === 'node' ? 'active' : ''}" data-type="node" id="mf-btn-node">📡 Node</button>
+                        <button class="mf-type-btn ${selectedType === 'gateway' ? 'active' : ''}" data-type="gateway" id="mf-btn-gateway">🏗️ Gateway</button>
+                    </div>` : `
+                    <div style="padding: 12px 20px 0;">
+                        <span style="font-size: 12px; font-weight: 600; color: ${defaultType === 'node' ? '#a78bfa' : '#34d399'};">${defaultType === 'node' ? '📡 Node' : '🏗️ Gateway'}</span>
+                    </div>`}
 
-            const popup = L.popup()
-                .setLatLng([lat, lng])
-                .setContent(popupContent)
-                .openOn(map);
+                    <div class="mf-body">
+                        ${!isEdit ? `
+                        <div class="mf-field">
+                            <label id="mf-id-label">${idLabel}</label>
+                            <input type="text" id="mf-item-id" placeholder="${idPlaceholder}" value="${defaultId}">
+                        </div>` : `
+                        <div class="mf-field">
+                            <label>ID</label>
+                            <div style="color: #94a3b8; font-size: 12px; font-family: monospace; padding: 6px 0;">${defaultId}</div>
+                        </div>`}
 
-            setTimeout(() => {
-                const btn = document.getElementById('saveItemBtn');
-                if (btn) {
-                    btn.addEventListener('click', () => {
-                        let type = defaultType;
-                        if (!isEdit) {
-                            const selector = document.querySelector('input[name="itemType"]:checked');
-                            if (selector) type = selector.value;
-                        }
+                        <div class="mf-field">
+                            <label>Name</label>
+                            <input type="text" id="mf-item-name" placeholder="e.g. Campus Roof" value="${defaultName}">
+                        </div>
 
-                        const idVal = isEdit ? defaultId : document.getElementById('itemId').value;
-                        const name = document.getElementById('itemName').value;
-                        const range = document.getElementById('itemRange').value;
-                        const altitude = document.getElementById('itemAltitude').value || 0;
+                        <div class="mf-field">
+                            <label>Range (meters)</label>
+                            <input type="number" id="mf-item-range" placeholder="e.g. 5000" value="${defaultRange}">
+                        </div>
 
-                        if (!idVal || !range) {
-                            alert("ID and Range are required!");
-                            return;
-                        }
+                        <div class="mf-field">
+                            <label>Altitude (meters)</label>
+                            <input type="number" id="mf-item-altitude" placeholder="e.g. 10" value="${defaultAltitude}">
+                        </div>
 
-                        const payload = {
-                            name: name,
-                            latitude: lat,
-                            longitude: lng,
-                            altitude: parseFloat(altitude),
-                            range: range
-                        };
+                        <div style="font-size: 10px; color: #475569; margin-top: -4px;">
+                            📌 ${lat.toFixed(6)}, ${lng.toFixed(6)}
+                        </div>
+                    </div>
 
-                        if (type === 'node') payload.dev_eui = idVal;
-                        if (type === 'gateway') payload.gateway_id = idVal;
+                    <div class="mf-actions">
+                        <button class="mf-btn-save" id="mf-save-btn">${isEdit ? 'Save Changes' : 'Save'}</button>
+                        <button class="mf-btn-cancel" id="mf-cancel-btn">Cancel</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(overlay);
 
-                        const endpoint = type === 'node' ? (isEdit ? `/nodes/${idVal}` : '/nodes') : (isEdit ? `/gateways/${idVal}` : '/gateways');
-                        const method = isEdit ? 'PUT' : 'POST';
+            // Close handlers
+            const closeForm = () => overlay.remove();
+            document.getElementById('mf-close-btn').addEventListener('click', closeForm);
+            document.getElementById('mf-cancel-btn').addEventListener('click', closeForm);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) closeForm(); });
 
-                        fetch(endpoint, {
-                            method: method,
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(payload)
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.status === 'ok') {
-                                    if (isEdit) {
-                                        // Update existing
-                                        const arr = type === 'node' ? nodesData : gatewaysData;
-                                        const key = type === 'node' ? 'dev_eui' : 'gateway_id';
-                                        const idx = arr.findIndex(n => n[key] === idVal);
-                                        if (idx !== -1) arr[idx] = payload;
-                                        currentEditId = null;
-                                        currentEditType = null;
-                                    } else {
-                                        // Push new
-                                        if (type === 'node') nodesData.push(payload);
-                                        if (type === 'gateway') gatewaysData.push(payload);
-                                    }
+            // Type toggle buttons (only for new items)
+            let currentFormType = selectedType;
+            if (!isEdit) {
+                const btnNode = document.getElementById('mf-btn-node');
+                const btnGW = document.getElementById('mf-btn-gateway');
+                btnNode.addEventListener('click', () => {
+                    btnNode.classList.add('active'); btnGW.classList.remove('active');
+                    currentFormType = 'node';
+                    document.getElementById('mf-id-label').textContent = 'Device EUI';
+                    document.getElementById('mf-item-id').placeholder = 'e.g. 0011223344556677';
+                });
+                btnGW.addEventListener('click', () => {
+                    btnGW.classList.add('active'); btnNode.classList.remove('active');
+                    currentFormType = 'gateway';
+                    document.getElementById('mf-id-label').textContent = 'Gateway ID';
+                    document.getElementById('mf-item-id').placeholder = 'e.g. my-gateway-01';
+                });
+            }
 
-                                    // Re-fetch nodes to sync connected_gateway values cleanly since DB calculates it automatically
-                                    refreshConnections();
+            // Save handler
+            document.getElementById('mf-save-btn').addEventListener('click', () => {
+                const type = isEdit ? defaultType : currentFormType;
+                const idVal = isEdit ? defaultId : document.getElementById('mf-item-id').value;
+                const name = document.getElementById('mf-item-name').value;
+                const range = document.getElementById('mf-item-range').value;
+                const altitude = document.getElementById('mf-item-altitude').value || 0;
 
-                                    if (type === 'gateway') drawGateway(payload);
-
-                                    map.closePopup();
-                                } else {
-                                    alert(`Failed to ${isEdit ? 'update' : 'add'} ${type}: ` + data.message);
-                                }
-                            })
-                            .catch(error => {
-                                console.error(`Error saving ${type}:`, error);
-                                alert("An error occurred. Check the console.");
-                            });
-                    });
+                if (!idVal || !range) {
+                    alert('ID and Range are required!');
+                    return;
                 }
-            }, 100);
+
+                const payload = {
+                    name: name,
+                    latitude: lat,
+                    longitude: lng,
+                    altitude: parseFloat(altitude),
+                    range: range
+                };
+                if (type === 'node') payload.dev_eui = idVal;
+                if (type === 'gateway') payload.gateway_id = idVal;
+
+                const endpoint = type === 'node'
+                    ? (isEdit ? `/nodes/${idVal}` : '/nodes')
+                    : (isEdit ? `/gateways/${idVal}` : '/gateways');
+
+                fetch(endpoint, {
+                    method: isEdit ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'ok') {
+                        if (isEdit) {
+                            const arr = type === 'node' ? nodesData : gatewaysData;
+                            const key = type === 'node' ? 'dev_eui' : 'gateway_id';
+                            const idx = arr.findIndex(n => n[key] === idVal);
+                            if (idx !== -1) arr[idx] = payload;
+                            currentEditId = null;
+                            currentEditType = null;
+                        } else {
+                            if (type === 'node') nodesData.push(payload);
+                            if (type === 'gateway') gatewaysData.push(payload);
+                        }
+                        refreshConnections();
+                        if (type === 'gateway') drawGateway(payload);
+                        closeForm();
+                    } else {
+                        alert(`Failed to ${isEdit ? 'update' : 'add'} ${type}: ` + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error(`Error saving ${type}:`, err);
+                    alert('An error occurred. Check the console.');
+                });
+            });
         }
 
-        // Add click event to map to place/move a node or gateway
-        map.on('click', function (e) {
+        // ─── Right-click Context Menu (replaces left-click add) ───
+        let activeContextMenu = null;
+
+        function removeContextMenu() {
+            if (activeContextMenu) {
+                activeContextMenu.remove();
+                activeContextMenu = null;
+            }
+        }
+
+        // Suppress default browser context menu on the map
+        document.getElementById('map').addEventListener('contextmenu', e => e.preventDefault());
+
+        // Left-click on map: just close context menu, do nothing else
+        map.on('click', function () {
+            removeContextMenu();
+            if (currentEditId !== null) {
+                currentEditId = null;
+                currentEditType = null;
+            }
+        });
+
+        // Right-click on map: show context menu
+        map.on('contextmenu', function (e) {
+            removeContextMenu();
             const lat = e.latlng.lat;
             const lng = e.latlng.lng;
 
-            if (currentEditId !== null && currentEditType !== null) {
-                // Just close the config window and reset edit state
-                currentEditId = null;
-                currentEditType = null;
-            } else {
-                // Adding a brand new item
-                openFormPopup(lat, lng, null, null);
-            }
+            const menu = document.createElement('div');
+            menu.className = 'map-context-menu';
+
+            // Position relative to the map container
+            const mapEl = document.getElementById('map');
+            const rect = mapEl.getBoundingClientRect();
+            let x = e.originalEvent.clientX - rect.left;
+            let y = e.originalEvent.clientY - rect.top;
+
+            // Prevent overflowing off-screen
+            if (x + 200 > rect.width) x = rect.width - 200;
+            if (y + 140 > rect.height) y = rect.height - 140;
+
+            menu.style.left = x + 'px';
+            menu.style.top = y + 'px';
+
+            menu.innerHTML = `
+                <div class="ctx-menu-item" id="ctx-add-node">
+                    <span class="ctx-icon">📡</span>
+                    <span>Add Node</span>
+                </div>
+                <div class="ctx-menu-item" id="ctx-add-gateway">
+                    <span class="ctx-icon">🏗️</span>
+                    <span>Add Gateway</span>
+                </div>
+                <div class="ctx-menu-separator"></div>
+                <div class="ctx-menu-coords">${lat.toFixed(6)}, ${lng.toFixed(6)}</div>
+            `;
+
+            mapEl.appendChild(menu);
+            activeContextMenu = menu;
+
+            // Context menu actions
+            document.getElementById('ctx-add-node').addEventListener('click', () => {
+                removeContextMenu();
+                openFormPopup(lat, lng, null, 'node');
+            });
+
+            document.getElementById('ctx-add-gateway').addEventListener('click', () => {
+                removeContextMenu();
+                openFormPopup(lat, lng, null, 'gateway');
+            });
+
+            // Close on any subsequent click
+            const closeHandler = () => {
+                removeContextMenu();
+                document.removeEventListener('click', closeHandler);
+            };
+            setTimeout(() => document.addEventListener('click', closeHandler), 0);
         });
 
         // --- User Geolocation Feature --- Removed
