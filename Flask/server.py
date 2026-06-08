@@ -683,25 +683,46 @@ def adsb_track_proxy(icao24):
 
 @app.route("/api/adsb/routeset", methods=["POST"])
 def adsb_routeset_proxy():
-    """Proxy to adsb.lol /api/0/routeset endpoint for aircraft route data."""
+    """Proxy to routeset API for aircraft route data.
+    Tries adsb.lol first, falls back to adsb.im."""
     try:
         body = request.get_json(force=True)
         app.logger.info(f"routeset request body: {json.dumps(body)}")
         encoded = json.dumps(body).encode("utf-8")
-        req = Request(
+
+        # Try multiple routeset API providers
+        providers = [
             "https://api.adsb.lol/api/0/routeset",
-            data=encoded,
-            headers={"Content-Type": "application/json"},
-            method="POST"
-        )
-        with urlopen(req, timeout=10) as resp:
-            raw = resp.read().decode()
-            app.logger.info(f"routeset response (first 500 chars): {raw[:500]}")
-            data = json.loads(raw)
-        return jsonify(data), 200
-    except URLError as e:
-        app.logger.error(f"adsb.lol routeset fetch failed: {e}")
-        return jsonify({"status": "error", "message": "Failed to fetch route data"}), 502
+            "https://adsb.im/api/0/routeset",
+        ]
+
+        last_error = None
+        for api_url in providers:
+            try:
+                req = Request(
+                    api_url,
+                    data=encoded,
+                    headers={"Content-Type": "application/json"},
+                    method="POST"
+                )
+                with urlopen(req, timeout=10) as resp:
+                    status = resp.getcode()
+                    raw = resp.read().decode()
+                    app.logger.info(f"routeset [{api_url}] status={status}, body(500)={raw[:500]}")
+
+                    if not raw or not raw.strip():
+                        app.logger.warning(f"routeset [{api_url}] returned empty body")
+                        last_error = "Empty response"
+                        continue
+
+                    data = json.loads(raw)
+                    return jsonify(data), 200
+            except Exception as e:
+                app.logger.warning(f"routeset [{api_url}] failed: {e}")
+                last_error = str(e)
+                continue
+
+        return jsonify({"status": "error", "message": f"All routeset providers failed: {last_error}"}), 502
     except Exception as e:
         app.logger.error(f"routeset proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500

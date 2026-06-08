@@ -1058,10 +1058,16 @@
             const type = ac.t || '—';
             const hex = ac.hex.toUpperCase();
             const alt = formatAltitude(ac.alt_baro);
+            const altMetric = (ac.alt_baro != null && ac.alt_baro !== 'ground')
+                ? ` <span style="color:#64748b;font-size:11px">(${Math.round(parseInt(ac.alt_baro) * 0.3048).toLocaleString()} m)</span>` : '';
             const gs = ac.gs != null ? Math.round(ac.gs) + ' kts' : '—';
+            const gsMetric = ac.gs != null
+                ? ` <span style="color:#64748b;font-size:11px">(${Math.round(ac.gs * 1.852)} km/h)</span>` : '';
             const squawk = ac.squawk || '—';
             const heading = ac.track != null ? Math.round(ac.track) + '°' : '—';
             const vr = ac.baro_rate != null ? (ac.baro_rate > 0 ? '▲ +' : '▼ ') + ac.baro_rate + ' ft/m' : '—';
+            const vrMetric = ac.baro_rate != null
+                ? ` <span style="color:#64748b;font-size:11px">(${Math.round(ac.baro_rate * 0.3048)} m/m)</span>` : '';
             const pos = (ac.lat != null && ac.lon != null) ? `${ac.lat.toFixed(4)}, ${ac.lon.toFixed(4)}` : '—';
             const source = ac.type || '—';
             const rssi = ac.rssi != null ? ac.rssi.toFixed(1) + ' dBFS' : '—';
@@ -1073,9 +1079,9 @@
             document.getElementById('adp-reg').textContent = reg;
             document.getElementById('adp-type').textContent = type;
             document.getElementById('adp-squawk').textContent = squawk;
-            document.getElementById('adp-speed').textContent = gs;
-            document.getElementById('adp-alt').textContent = alt;
-            document.getElementById('adp-vrate').textContent = vr;
+            document.getElementById('adp-speed').innerHTML = gs + gsMetric;
+            document.getElementById('adp-alt').innerHTML = alt + altMetric;
+            document.getElementById('adp-vrate').innerHTML = vr + vrMetric;
             document.getElementById('adp-track').textContent = heading;
             document.getElementById('adp-pos').textContent = pos;
             document.getElementById('adp-source').textContent = source;
@@ -1215,6 +1221,7 @@
         }
 
         let trackSegments = []; // colored trail segments
+        let lastSelectedPos = null; // last known [lat, lon, alt_baro] of selected aircraft for live trail
 
         function clearTrack() {
             if (activeTrackPolyline) {
@@ -1223,6 +1230,7 @@
             }
             trackSegments.forEach(seg => adsbLayerGroup.removeLayer(seg));
             trackSegments = [];
+            lastSelectedPos = null;
         }
 
         function fetchAndShowTrack(icao24) {
@@ -1249,6 +1257,9 @@
                         adsbLayerGroup.addLayer(seg);
                         trackSegments.push(seg);
                     }
+                    // Set lastSelectedPos to the last point in the track for live appending
+                    const lastPt = data.path[data.path.length - 1];
+                    lastSelectedPos = [lastPt[1], lastPt[2], lastPt[3] != null ? Math.round(lastPt[3] * 3.28084) : null];
                 })
                 .catch(err => console.warn('Track fetch error:', err));
         }
@@ -1291,6 +1302,22 @@
                         if (routePolyline && routeDestination && ac.lat != null && ac.lon != null) {
                             routePolyline.setLatLngs([[ac.lat, ac.lon], routeDestination]);
                         }
+                        // Live-append trail segment from last known position
+                        if (lastSelectedPos && ac.lat != null && ac.lon != null) {
+                            const [prevLat, prevLon, prevAlt] = lastSelectedPos;
+                            // Only add segment if position actually changed
+                            if (prevLat !== ac.lat || prevLon !== ac.lon) {
+                                const segColor = getAltitudeColor(prevAlt != null ? prevAlt : ac.alt_baro);
+                                const seg = L.polyline(
+                                    [[prevLat, prevLon], [ac.lat, ac.lon]],
+                                    { color: segColor, weight: 3, opacity: 0.85, interactive: false }
+                                );
+                                adsbLayerGroup.addLayer(seg);
+                                trackSegments.push(seg);
+                            }
+                        }
+                        // Update last known position
+                        lastSelectedPos = [ac.lat, ac.lon, ac.alt_baro];
                     }
                 } else {
                     // Create new marker with tar1090-style embedded SVG
@@ -2867,12 +2894,33 @@
         // Suppress default browser context menu on the map
         document.getElementById('map').addEventListener('contextmenu', e => e.preventDefault());
 
-        // Left-click on map: just close context menu, do nothing else
+        // Left-click on map: close context menu, deselect aircraft, clear track
         map.on('click', function () {
             removeContextMenu();
             if (currentEditId !== null) {
                 currentEditId = null;
                 currentEditType = null;
+            }
+            // Close aircraft detail panel and clear track
+            if (selectedAcData) {
+                hideDetailPanel();
+                clearTrack();
+                selectedAircraftHex = null;
+            }
+        });
+
+        // Escape key: close detail panel, context menu, and form overlays
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                removeContextMenu();
+                if (selectedAcData) {
+                    hideDetailPanel();
+                    clearTrack();
+                    selectedAircraftHex = null;
+                }
+                // Also close any open form overlay
+                const overlay = document.querySelector('.modern-form-overlay');
+                if (overlay) overlay.remove();
             }
         });
 
