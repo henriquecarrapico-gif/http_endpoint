@@ -638,48 +638,49 @@ def adsb_proxy():
 
 @app.route("/api/adsb/track/<icao24>", methods=["GET"])
 def adsb_track_proxy(icao24):
-    """Proxy to OpenSky Network /tracks/all endpoint for aircraft trail data.
-    Falls back to adsb.lol trace endpoint if OpenSky fails."""
-    # Try OpenSky first
-    url = f"https://opensky-network.org/api/tracks/all?icao24={icao24.lower()}&time=0"
+    """Proxy for aircraft trail data.
+    Tries globe.adsb.lol trace JSON (same source as tar1090), then OpenSky."""
+    hex_lower = icao24.lower()
+
+    # Try globe.adsb.lol trace JSON (same as tar1090 uses)
+    # The trace files are at /data/traces/{last2hex}/trace_full_{hex}.json
+    last2 = hex_lower[-2:]
+    trace_url = f"https://globe.adsb.lol/data/traces/{last2}/trace_full_{hex_lower}.json"
     try:
+        req = Request(trace_url, headers={"Accept": "application/json"})
+        with urlopen(req, timeout=10) as resp:
+            raw = resp.read().decode()
+            if raw and raw.strip():
+                trace_data = json.loads(raw)
+                # Format: {"icao":"hex","timestamp":..., "trace":[[ts,lat,lon,alt,...], ...]}
+                if "trace" in trace_data and len(trace_data["trace"]) >= 2:
+                    path = []
+                    for point in trace_data["trace"]:
+                        ts = point[0] if len(point) > 0 else 0
+                        lat = point[1] if len(point) > 1 else None
+                        lon = point[2] if len(point) > 2 else None
+                        alt_baro = point[3] if len(point) > 3 else None
+                        track_deg = point[4] if len(point) > 4 else None
+                        if lat is not None and lon is not None:
+                            # alt_baro is in feet in trace files, convert to meters
+                            alt_m = alt_baro * 0.3048 if alt_baro and isinstance(alt_baro, (int, float)) else None
+                            path.append([ts, lat, lon, alt_m, track_deg, False])
+                    if len(path) >= 2:
+                        app.logger.info(f"trace [{trace_url}] returned {len(path)} points")
+                        return jsonify({"icao24": hex_lower, "path": path}), 200
+    except Exception as e:
+        app.logger.warning(f"globe.adsb.lol trace failed for {hex_lower}: {e}")
+
+    # Fallback: OpenSky
+    try:
+        url = f"https://opensky-network.org/api/tracks/all?icao24={hex_lower}&time=0"
         with urlopen(url, timeout=10) as resp:
             data = json.loads(resp.read().decode())
         return jsonify(data), 200
     except Exception as e:
-        app.logger.warning(f"OpenSky track failed for {icao24}: {e}, trying adsb.lol...")
+        app.logger.warning(f"OpenSky track also failed for {hex_lower}: {e}")
 
-    # Fallback: adsb.lol trace
-    try:
-        fallback_url = f"https://api.adsb.lol/api/0/aircraft/hex/{icao24.lower()}"
-        req = Request(fallback_url, headers={"Accept": "application/json"})
-        with urlopen(req, timeout=10) as resp:
-            raw = resp.read().decode()
-            adsb_data = json.loads(raw)
-        # adsb.lol returns {ac: [...]} — extract trace data if available
-        if "ac" in adsb_data and len(adsb_data["ac"]) > 0:
-            ac = adsb_data["ac"][0]
-            # Build a path from the trace arrays if present
-            trace = ac.get("trace", [])
-            if trace:
-                path = []
-                for point in trace:
-                    # trace entry: [relTimestamp, lat, lon, alt_baro (ft), gs, track, ...]
-                    ts = point[0] if len(point) > 0 else 0
-                    lat = point[1] if len(point) > 1 else None
-                    lon = point[2] if len(point) > 2 else None
-                    alt_ft = point[3] if len(point) > 3 else None
-                    track_deg = point[5] if len(point) > 5 else None
-                    if lat is not None and lon is not None:
-                        # Convert alt from ft to meters for consistency with OpenSky format
-                        alt_m = alt_ft * 0.3048 if alt_ft and isinstance(alt_ft, (int, float)) else None
-                        path.append([ts, lat, lon, alt_m, track_deg, False])
-                if len(path) >= 2:
-                    return jsonify({"icao24": icao24, "path": path}), 200
-        return jsonify({"status": "error", "message": "No trace data available"}), 404
-    except Exception as e2:
-        app.logger.error(f"adsb.lol trace fallback also failed for {icao24}: {e2}")
-        return jsonify({"status": "error", "message": str(e2)}), 502
+    return jsonify({"status": "error", "message": "No trail data available from any provider"}), 502
 
 @app.route("/api/adsb/routeset", methods=["POST"])
 def adsb_routeset_proxy():

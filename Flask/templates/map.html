@@ -1350,8 +1350,13 @@
 
                     // On click: show detail panel + fetch track
                     marker.on('click', function () {
+                        const latestAc = adsbMarkers[ac.hex]?.acData || ac;
                         selectedAircraftHex = ac.hex;
-                        showDetailPanel(adsbMarkers[ac.hex]?.acData || ac);
+                        showDetailPanel(latestAc);
+                        // Set lastSelectedPos immediately so live trail starts from first update
+                        if (latestAc.lat != null && latestAc.lon != null) {
+                            lastSelectedPos = [latestAc.lat, latestAc.lon, latestAc.alt_baro];
+                        }
                         fetchAndShowTrack(ac.hex);
                     });
 
