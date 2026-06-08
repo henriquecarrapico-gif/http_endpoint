@@ -383,18 +383,25 @@
             background: rgba(15, 23, 42, 0.92);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 10px;
             padding: 6px 0;
             min-width: 180px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
             font-family: 'Inter', sans-serif;
             animation: ctxFadeIn 0.12s ease-out;
         }
 
         @keyframes ctxFadeIn {
-            from { opacity: 0; transform: scale(0.95) translateY(-4px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(-4px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
 
         .ctx-menu-item {
@@ -426,7 +433,7 @@
 
         .ctx-menu-separator {
             height: 1px;
-            background: rgba(255,255,255,0.06);
+            background: rgba(255, 255, 255, 0.06);
             margin: 4px 8px;
         }
 
@@ -442,7 +449,7 @@
         .modern-form-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.45);
+            background: rgba(0, 0, 0, 0.45);
             z-index: 10001;
             display: flex;
             align-items: center;
@@ -451,20 +458,25 @@
         }
 
         @keyframes overlayIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         .modern-form-card {
             background: rgba(15, 23, 42, 0.95);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             border-radius: 16px;
             padding: 0;
             width: 340px;
             max-width: 90vw;
-            box-shadow: 0 12px 48px rgba(0,0,0,0.5);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
             font-family: 'Inter', sans-serif;
             color: #e2e8f0;
             animation: cardIn 0.2s ease-out;
@@ -472,13 +484,20 @@
         }
 
         @keyframes cardIn {
-            from { opacity: 0; transform: scale(0.92) translateY(12px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
+            from {
+                opacity: 0;
+                transform: scale(0.92) translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
         }
 
         .mf-header {
             padding: 16px 20px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.06);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -498,7 +517,9 @@
             transition: color 0.15s;
         }
 
-        .mf-close:hover { color: #f87171; }
+        .mf-close:hover {
+            color: #f87171;
+        }
 
         .mf-type-toggle {
             display: flex;
@@ -509,7 +530,7 @@
         .mf-type-btn {
             flex: 1;
             padding: 8px 0;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             background: transparent;
             color: #94a3b8;
@@ -531,7 +552,7 @@
         }
 
         .mf-type-btn:hover:not(.active) {
-            border-color: rgba(255,255,255,0.2);
+            border-color: rgba(255, 255, 255, 0.2);
             color: #cbd5e1;
         }
 
@@ -556,9 +577,9 @@
         .mf-field input {
             width: 100%;
             padding: 8px 12px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
-            background: rgba(255,255,255,0.04);
+            background: rgba(255, 255, 255, 0.04);
             color: #e2e8f0;
             font-size: 13px;
             font-family: 'Inter', sans-serif;
@@ -595,11 +616,13 @@
             transition: opacity 0.15s;
         }
 
-        .mf-btn-save:hover { opacity: 0.9; }
+        .mf-btn-save:hover {
+            opacity: 0.9;
+        }
 
         .mf-btn-cancel {
             padding: 10px 16px;
-            border: 1px solid rgba(255,255,255,0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             background: transparent;
             color: #94a3b8;
@@ -611,8 +634,64 @@
         }
 
         .mf-btn-cancel:hover {
-            border-color: rgba(255,255,255,0.2);
+            border-color: rgba(255, 255, 255, 0.2);
             color: #e2e8f0;
+        }
+
+        /* ─── Altitude Legend Bar ─── */
+        .altitude-legend {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 0;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 10px;
+            padding: 6px 14px;
+            font-family: 'Inter', sans-serif;
+            pointer-events: none;
+        }
+
+        .alt-legend-bar {
+            width: 260px;
+            height: 10px;
+            border-radius: 5px;
+            background: linear-gradient(to right,
+                #4ade80 0%,
+                #a3e635 12%,
+                #facc15 25%,
+                #fb923c 42%,
+                #f87171 58%,
+                #e879f9 75%,
+                #a78bfa 88%,
+                #60a5fa 100%);
+        }
+
+        .alt-legend-labels {
+            display: flex;
+            justify-content: space-between;
+            width: 260px;
+            margin-top: 2px;
+        }
+
+        .alt-legend-labels span {
+            font-size: 8px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+
+        .alt-legend-title {
+            font-size: 9px;
+            color: #64748b;
+            font-weight: 600;
+            margin-right: 10px;
+            white-space: nowrap;
         }
     </style>
 </head>
@@ -648,7 +727,8 @@
             </div>
 
             <div id="adp-photo-container" style="padding: 0; display: none;">
-                <img id="adp-photo" src="" alt="Aircraft photo" style="width: 100%; display: block; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <img id="adp-photo" src="" alt="Aircraft photo"
+                    style="width: 100%; display: block; border-top: 1px solid rgba(255,255,255,0.06); border-bottom: 1px solid rgba(255,255,255,0.06);">
                 <div id="adp-photo-credit" style="padding: 2px 14px 4px; font-size: 9px; color: #475569;"></div>
             </div>
 
@@ -745,6 +825,22 @@
                 <!-- Nodes dynamically injected here by JS -->
             </div>
         </div>
+
+    <!-- Altitude Legend -->
+    <div class="altitude-legend" id="altitude-legend">
+        <span class="alt-legend-title">ALT</span>
+        <div>
+            <div class="alt-legend-bar"></div>
+            <div class="alt-legend-labels">
+                <span>GND</span>
+                <span>5k</span>
+                <span>15k</span>
+                <span>25k</span>
+                <span>35k</span>
+                <span>45k+</span>
+            </div>
+        </div>
+    </div>
     </div>
 
 
@@ -855,13 +951,37 @@
         const ADSB_RADIUS_NM = 100;       // nautical miles
         let selectedAircraftHex = null;   // hex of currently selected aircraft
 
+        // Smooth altitude → color gradient (tar1090 style)
+        // GND → green → yellow → orange → red → pink → purple → blue
         function getAltitudeColor(altBaro) {
             if (altBaro === 'ground' || altBaro == null) return '#888';
             const alt = parseInt(altBaro);
-            if (alt < 1000) return '#4ade80';    // green – low
-            if (alt < 10000) return '#facc15';   // yellow – medium
-            if (alt < 25000) return '#fb923c';   // orange – high
-            return '#f87171';                     // red – very high
+            if (isNaN(alt)) return '#888';
+            // Clamp to 0..45000 range
+            const t = Math.max(0, Math.min(alt / 45000, 1));
+            // Gradient stops matching the legend bar
+            const stops = [
+                [0.00, [74, 222, 128]],   // #4ade80 green
+                [0.12, [163, 230, 53]],   // #a3e635 lime
+                [0.25, [250, 204, 21]],   // #facc15 yellow
+                [0.42, [251, 146, 60]],   // #fb923c orange
+                [0.58, [248, 113, 113]],  // #f87171 red
+                [0.75, [232, 121, 249]],  // #e879f9 pink
+                [0.88, [167, 139, 250]],  // #a78bfa purple
+                [1.00, [96, 165, 250]],   // #60a5fa blue
+            ];
+            // Find the two stops we're between
+            let i = 0;
+            for (; i < stops.length - 1; i++) {
+                if (t <= stops[i + 1][0]) break;
+            }
+            const [t0, c0] = stops[i];
+            const [t1, c1] = stops[Math.min(i + 1, stops.length - 1)];
+            const f = t0 === t1 ? 0 : (t - t0) / (t1 - t0);
+            const r = Math.round(c0[0] + f * (c1[0] - c0[0]));
+            const g = Math.round(c0[1] + f * (c1[1] - c0[1]));
+            const b = Math.round(c0[2] + f * (c1[2] - c0[2]));
+            return `rgb(${r},${g},${b})`;
         }
 
         function formatAltitude(altBaro) {
@@ -903,6 +1023,7 @@
 
         // ─── Detail Panel + Route Logic ───
         let routePolyline = null;      // dotted line to destination airport
+        let routeDestination = null;   // [lat, lon] of destination for live updates
         let selectedAcData = null;     // currently displayed aircraft data
 
         function showDetailPanel(ac) {
@@ -990,6 +1111,7 @@
         function hideDetailPanel() {
             document.getElementById('adsb-detail-panel').classList.remove('open');
             selectedAcData = null;
+            routeDestination = null;
             clearRoutePolyline();
         }
 
@@ -1014,34 +1136,52 @@
                 return;
             }
 
+            // Store destination for live route-line updates
+            const reqBody = { planes: [{ callsign: callsign, lat: ac.lat, lon: ac.lon }] };
+            console.log('[Route] Fetching route for', callsign, reqBody);
+
             fetch('/api/adsb/routeset', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    planes: [{ callsign: callsign, lat: ac.lat, lng: ac.lon }]
-                })
+                body: JSON.stringify(reqBody)
             })
-                .then(res => res.json())
+                .then(res => {
+                    console.log('[Route] Response status:', res.status);
+                    return res.json();
+                })
                 .then(data => {
+                    console.log('[Route] Response data:', JSON.stringify(data).substring(0, 500));
                     if (!selectedAcData || selectedAcData.hex !== ac.hex) return; // stale
 
                     // Parse the route response
-                    // Format: array of objects with _airports array [{icao, iata, name, lat, lon}]
                     let routeStr = null;
                     let destLat = null, destLon = null;
 
-                    if (Array.isArray(data) && data.length > 0 && data[0]._airports) {
-                        const airports = data[0]._airports;
-                        if (airports.length >= 2) {
+                    // Try multiple response formats
+                    let routeEntry = null;
+                    if (Array.isArray(data) && data.length > 0) {
+                        routeEntry = data[0];
+                    } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+                        routeEntry = data;
+                    }
+
+                    if (routeEntry) {
+                        // Format 1: _airports array
+                        const airports = routeEntry._airports || routeEntry.airports;
+                        if (airports && airports.length >= 2) {
                             const orig = airports[0];
                             const dest = airports[airports.length - 1];
-                            routeStr = `<span class="adp-route-airports">${orig.icao || orig.iata}<span class="adp-route-arrow"> → </span>${dest.icao || dest.iata}</span>`;
+                            routeStr = `<span class="adp-route-airports">${orig.icao || orig.iata || '?'}<span class="adp-route-arrow"> → </span>${dest.icao || dest.iata || '?'}</span>`;
                             if (dest.lat != null && dest.lon != null) {
                                 destLat = dest.lat;
                                 destLon = dest.lon;
                             }
-                        } else if (airports.length === 1) {
+                        } else if (airports && airports.length === 1) {
                             routeStr = airports[0].icao || airports[0].iata || 'Unknown';
+                        }
+                        // Format 2: route string
+                        if (!routeStr && (routeEntry.route || routeEntry._route)) {
+                            routeStr = `<span class="adp-route-airports">${routeEntry.route || routeEntry._route}</span>`;
                         }
                     }
 
@@ -1054,17 +1194,19 @@
                         routeEl.className = 'adp-route-loading';
                     }
 
-                    // Draw dotted line to destination
+                    // Draw dotted line to destination + store dest for live updates
                     clearRoutePolyline();
-                    if (destLat != null && destLon != null && ac.lat != null && ac.lon != null) {
+                    routeDestination = (destLat != null && destLon != null) ? [destLat, destLon] : null;
+                    if (routeDestination && ac.lat != null && ac.lon != null) {
                         routePolyline = L.polyline(
-                            [[ac.lat, ac.lon], [destLat, destLon]],
+                            [[ac.lat, ac.lon], routeDestination],
                             { color: '#9ca3af', weight: 1.5, opacity: 0.6, dashArray: '4, 6', interactive: false }
                         );
                         adsbLayerGroup.addLayer(routePolyline);
                     }
                 })
-                .catch(() => {
+                .catch(err => {
+                    console.error('[Route] Fetch error:', err);
                     if (selectedAcData && selectedAcData.hex === ac.hex) {
                         document.getElementById('adp-route-text').textContent = 'Route unavailable';
                         document.getElementById('adp-route-text').className = 'adp-route-loading';
@@ -1072,11 +1214,15 @@
                 });
         }
 
+        let trackSegments = []; // colored trail segments
+
         function clearTrack() {
             if (activeTrackPolyline) {
                 adsbLayerGroup.removeLayer(activeTrackPolyline);
                 activeTrackPolyline = null;
             }
+            trackSegments.forEach(seg => adsbLayerGroup.removeLayer(seg));
+            trackSegments = [];
         }
 
         function fetchAndShowTrack(icao24) {
@@ -1089,14 +1235,20 @@
                 .then(data => {
                     if (!data.path || !Array.isArray(data.path) || data.path.length < 2) return;
                     // path entries: [timestamp, lat, lon, altitude_m, track, on_ground]
-                    const latlngs = data.path.map(p => [p[1], p[2]]);
-                    activeTrackPolyline = L.polyline(latlngs, {
-                        color: '#3b82f6',
-                        weight: 3,
-                        opacity: 0.8,
-                        dashArray: '8, 5'
-                    });
-                    adsbLayerGroup.addLayer(activeTrackPolyline);
+                    // Draw colored segments based on altitude
+                    for (let i = 0; i < data.path.length - 1; i++) {
+                        const p1 = data.path[i];
+                        const p2 = data.path[i + 1];
+                        // altitude_m → feet for color
+                        const altFt = p1[3] != null ? Math.round(p1[3] * 3.28084) : null;
+                        const color = getAltitudeColor(altFt);
+                        const seg = L.polyline(
+                            [[p1[1], p1[2]], [p2[1], p2[2]]],
+                            { color: color, weight: 3, opacity: 0.85, interactive: false }
+                        );
+                        adsbLayerGroup.addLayer(seg);
+                        trackSegments.push(seg);
+                    }
                 })
                 .catch(err => console.warn('Track fetch error:', err));
         }
@@ -1135,6 +1287,10 @@
                     if (selectedAcData && selectedAcData.hex === ac.hex) {
                         selectedAcData = ac;
                         updateDetailPanelData(ac);
+                        // Live-update the route polyline start point
+                        if (routePolyline && routeDestination && ac.lat != null && ac.lon != null) {
+                            routePolyline.setLatLngs([[ac.lat, ac.lon], routeDestination]);
+                        }
                     }
                 } else {
                     // Create new marker with tar1090-style embedded SVG
@@ -2537,13 +2693,13 @@
 
             const defaultId = isEdit ? (editData.dev_eui || editData.gateway_id) : '';
             const defaultName = isEdit ? (editData.name || '') : '';
-            const defaultRange = isEdit ? editData.range : '';
+            const defaultRange = isEdit ? editData.range : (defaultType === 'gateway' ? '5000' : '2000');
             const defaultAltitude = isEdit ? (editData.altitude || 0) : 0;
 
             // ─── Modern Form Modal (glassmorphic overlay) ───
             const selectedType = defaultType || 'node';
             const idLabel = selectedType === 'node' ? 'Device EUI' : 'Gateway ID';
-            const idPlaceholder = selectedType === 'node' ? 'e.g. 0011223344556677' : 'e.g. my-gateway-01';
+            const idPlaceholder = selectedType === 'node' ? 'e.g. 0011223344556677' : 'e.g. 11223344aabbccdd';
 
             // Remove any existing overlay
             const existingOverlay = document.querySelector('.modern-form-overlay');
@@ -2617,17 +2773,24 @@
             if (!isEdit) {
                 const btnNode = document.getElementById('mf-btn-node');
                 const btnGW = document.getElementById('mf-btn-gateway');
+                const rangeInput = document.getElementById('mf-range');
                 btnNode.addEventListener('click', () => {
                     btnNode.classList.add('active'); btnGW.classList.remove('active');
                     currentFormType = 'node';
                     document.getElementById('mf-id-label').textContent = 'Device EUI';
                     document.getElementById('mf-item-id').placeholder = 'e.g. 0011223344556677';
+                    if (rangeInput && (rangeInput.value === '5000' || rangeInput.value === '2000' || !rangeInput.value)) {
+                        rangeInput.value = '2000';
+                    }
                 });
                 btnGW.addEventListener('click', () => {
                     btnGW.classList.add('active'); btnNode.classList.remove('active');
                     currentFormType = 'gateway';
                     document.getElementById('mf-id-label').textContent = 'Gateway ID';
-                    document.getElementById('mf-item-id').placeholder = 'e.g. my-gateway-01';
+                    document.getElementById('mf-item-id').placeholder = 'e.g. 11223344aabbccdd';
+                    if (rangeInput && (rangeInput.value === '2000' || rangeInput.value === '5000' || !rangeInput.value)) {
+                        rangeInput.value = '5000';
+                    }
                 });
             }
 
@@ -2663,31 +2826,31 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'ok') {
-                        if (isEdit) {
-                            const arr = type === 'node' ? nodesData : gatewaysData;
-                            const key = type === 'node' ? 'dev_eui' : 'gateway_id';
-                            const idx = arr.findIndex(n => n[key] === idVal);
-                            if (idx !== -1) arr[idx] = payload;
-                            currentEditId = null;
-                            currentEditType = null;
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.status === 'ok') {
+                            if (isEdit) {
+                                const arr = type === 'node' ? nodesData : gatewaysData;
+                                const key = type === 'node' ? 'dev_eui' : 'gateway_id';
+                                const idx = arr.findIndex(n => n[key] === idVal);
+                                if (idx !== -1) arr[idx] = payload;
+                                currentEditId = null;
+                                currentEditType = null;
+                            } else {
+                                if (type === 'node') nodesData.push(payload);
+                                if (type === 'gateway') gatewaysData.push(payload);
+                            }
+                            refreshConnections();
+                            if (type === 'gateway') drawGateway(payload);
+                            closeForm();
                         } else {
-                            if (type === 'node') nodesData.push(payload);
-                            if (type === 'gateway') gatewaysData.push(payload);
+                            alert(`Failed to ${isEdit ? 'update' : 'add'} ${type}: ` + data.message);
                         }
-                        refreshConnections();
-                        if (type === 'gateway') drawGateway(payload);
-                        closeForm();
-                    } else {
-                        alert(`Failed to ${isEdit ? 'update' : 'add'} ${type}: ` + data.message);
-                    }
-                })
-                .catch(err => {
-                    console.error(`Error saving ${type}:`, err);
-                    alert('An error occurred. Check the console.');
-                });
+                    })
+                    .catch(err => {
+                        console.error(`Error saving ${type}:`, err);
+                        alert('An error occurred. Check the console.');
+                    });
             });
         }
 
