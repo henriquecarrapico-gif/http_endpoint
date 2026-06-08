@@ -1233,26 +1233,74 @@
             lastSelectedPos = null;
         }
 
+        // Local position history for each aircraft (built from ADS-B polls)
+        // Map of hex -> [{lat, lon, alt_baro, ts}, ...]
+        const aircraftHistory = new Map();
+        const MAX_HISTORY_POINTS = 500;
+
+        function recordAircraftPositions(aircraftList) {
+            const now = Date.now();
+            aircraftList.forEach(ac => {
+                if (ac.lat == null || ac.lon == null) return;
+                if (!aircraftHistory.has(ac.hex)) {
+                    aircraftHistory.set(ac.hex, []);
+                }
+                const hist = aircraftHistory.get(ac.hex);
+                // Avoid duplicate points at the same location
+                const last = hist.length > 0 ? hist[hist.length - 1] : null;
+                if (last && last.lat === ac.lat && last.lon === ac.lon) return;
+                hist.push({ lat: ac.lat, lon: ac.lon, alt_baro: ac.alt_baro, ts: now });
+                // Cap history size
+                if (hist.length > MAX_HISTORY_POINTS) hist.shift();
+            });
+        }
+
         function fetchAndShowTrack(icao24) {
             clearTrack();
-            console.log('[Track] Fetching trace for', icao24, 'via server proxy');
+
+            // First: draw trail from local position history (always available)
+            const localHist = aircraftHistory.get(icao24);
+            if (localHist && localHist.length >= 2) {
+                console.log(`[Track] Drawing ${localHist.length} points from local history`);
+                for (let i = 0; i < localHist.length - 1; i++) {
+                    const p1 = localHist[i];
+                    const p2 = localHist[i + 1];
+                    const color = getAltitudeColor(p1.alt_baro);
+                    const seg = L.polyline(
+                        [[p1.lat, p1.lon], [p2.lat, p2.lon]],
+                        { color: color, weight: 3, opacity: 0.85, interactive: false }
+                    );
+                    adsbLayerGroup.addLayer(seg);
+                    trackSegments.push(seg);
+                }
+                // Set lastSelectedPos to the last local history point
+                const lastPt = localHist[localHist.length - 1];
+                lastSelectedPos = [lastPt.lat, lastPt.lon, lastPt.alt_baro];
+            }
+
+            // Then: try to fetch extended history from server (OpenSky/adsb.lol)
+            // This will prepend older points if available
             fetch(`/api/adsb/track/${icao24}`)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     return res.json();
                 })
                 .then(data => {
-                    if (data.path && Array.isArray(data.path) && data.path.length >= 2) {
-                        drawTraceSegments(data.path, false);
-                    } else {
-                        console.warn('[Track] No path data in response');
-                    }
+                    if (!data.path || !Array.isArray(data.path) || data.path.length < 2) return;
+                    console.log(`[Track] Got ${data.path.length} points from server, redrawing with full history`);
+                    // Clear local-only trail and redraw with full server history
+                    trackSegments.forEach(seg => adsbLayerGroup.removeLayer(seg));
+                    trackSegments = [];
+                    drawTraceSegments(data.path, false);
                 })
-                .catch(err => console.warn('[Track] Fetch error:', err.message));
+                .catch(err => {
+                    // Server fetch failed — local history trail is already drawn, that's fine
+                    console.log(`[Track] Server fetch failed (${err.message}), using local history only`);
+                });
         }
 
         // Draw colored trail segments from trace data
-        // isGlobeFormat: true = globe.adsb.lol format (alt in feet or "ground"), false = server proxy (alt in meters)
+        // isGlobeFormat: true = alt in feet, false = server proxy (alt in meters)
         function drawTraceSegments(trace, isGlobeFormat) {
             for (let i = 0; i < trace.length - 1; i++) {
                 const p1 = trace[i];
@@ -1261,16 +1309,8 @@
                 const lat2 = p2[1], lon2 = p2[2];
                 if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) continue;
 
-                let altFt;
-                if (isGlobeFormat) {
-                    // Globe format: alt_baro at index 3, can be number (feet) or "ground"
-                    const alt = p1[3];
-                    altFt = (typeof alt === 'number') ? alt : (alt === 'ground' ? 0 : null);
-                } else {
-                    // Server proxy format: altitude in meters at index 3
-                    altFt = p1[3] != null ? Math.round(p1[3] * 3.28084) : null;
-                }
-
+                // Server proxy format: altitude in meters at index 3
+                const altFt = p1[3] != null ? Math.round(p1[3] * 3.28084) : null;
                 const color = getAltitudeColor(altFt);
                 const seg = L.polyline(
                     [[lat1, lon1], [lat2, lon2]],
@@ -1283,12 +1323,7 @@
             // Set lastSelectedPos to the last point for live appending
             const lastPt = trace[trace.length - 1];
             if (lastPt[1] != null && lastPt[2] != null) {
-                let alt;
-                if (isGlobeFormat) {
-                    alt = typeof lastPt[3] === 'number' ? lastPt[3] : null;
-                } else {
-                    alt = lastPt[3] != null ? Math.round(lastPt[3] * 3.28084) : null;
-                }
+                const alt = lastPt[3] != null ? Math.round(lastPt[3] * 3.28084) : null;
                 lastSelectedPos = [lastPt[1], lastPt[2], alt];
             }
             console.log(`[Track] Drew ${trackSegments.length} trail segments`);
@@ -1418,6 +1453,7 @@
                 .then(res => res.json())
                 .then(data => {
                     if (data.ac && Array.isArray(data.ac)) {
+                        recordAircraftPositions(data.ac); // Store position history locally
                         updateAdsbMarkers(data.ac);
                     }
                 })
