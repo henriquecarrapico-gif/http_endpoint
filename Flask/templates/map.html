@@ -1235,33 +1235,84 @@
 
         function fetchAndShowTrack(icao24) {
             clearTrack();
-            fetch(`/api/adsb/track/${icao24}`)
+            const hex = icao24.toLowerCase();
+            const last2 = hex.slice(-2);
+            // Try globe.adsb.lol directly from the browser (avoids server proxy issues)
+            const traceUrl = `https://globe.adsb.lol/data/traces/${last2}/trace_full_${hex}.json`;
+            console.log('[Track] Fetching trace from', traceUrl);
+
+            fetch(traceUrl)
                 .then(res => {
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    if (!res.ok) throw new Error(`Globe HTTP ${res.status}`);
                     return res.json();
                 })
-                .then(data => {
-                    if (!data.path || !Array.isArray(data.path) || data.path.length < 2) return;
-                    // path entries: [timestamp, lat, lon, altitude_m, track, on_ground]
-                    // Draw colored segments based on altitude
-                    for (let i = 0; i < data.path.length - 1; i++) {
-                        const p1 = data.path[i];
-                        const p2 = data.path[i + 1];
-                        // altitude_m → feet for color
-                        const altFt = p1[3] != null ? Math.round(p1[3] * 3.28084) : null;
-                        const color = getAltitudeColor(altFt);
-                        const seg = L.polyline(
-                            [[p1[1], p1[2]], [p2[1], p2[2]]],
-                            { color: color, weight: 3, opacity: 0.85, interactive: false }
-                        );
-                        adsbLayerGroup.addLayer(seg);
-                        trackSegments.push(seg);
+                .then(traceData => {
+                    if (!traceData.trace || traceData.trace.length < 2) {
+                        console.warn('[Track] Globe trace has no data');
+                        return;
                     }
-                    // Set lastSelectedPos to the last point in the track for live appending
-                    const lastPt = data.path[data.path.length - 1];
-                    lastSelectedPos = [lastPt[1], lastPt[2], lastPt[3] != null ? Math.round(lastPt[3] * 3.28084) : null];
+                    // trace entries: [relTimestamp, lat, lon, alt_baro, gs, track, flags, vert_rate, {metadata}, ...]
+                    // alt_baro can be a number (feet) or "ground"
+                    drawTraceSegments(traceData.trace, true);
                 })
-                .catch(err => console.warn('Track fetch error:', err));
+                .catch(err => {
+                    console.warn('[Track] Globe direct fetch failed:', err.message, '— trying server proxy...');
+                    // Fallback: try the server proxy
+                    fetch(`/api/adsb/track/${icao24}`)
+                        .then(res => {
+                            if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
+                            return res.json();
+                        })
+                        .then(data => {
+                            if (data.path && data.path.length >= 2) {
+                                drawTraceSegments(data.path, false);
+                            }
+                        })
+                        .catch(err2 => console.warn('[Track] All sources failed:', err2.message));
+                });
+        }
+
+        // Draw colored trail segments from trace data
+        // isGlobeFormat: true = globe.adsb.lol format (alt in feet or "ground"), false = server proxy (alt in meters)
+        function drawTraceSegments(trace, isGlobeFormat) {
+            for (let i = 0; i < trace.length - 1; i++) {
+                const p1 = trace[i];
+                const p2 = trace[i + 1];
+                const lat1 = p1[1], lon1 = p1[2];
+                const lat2 = p2[1], lon2 = p2[2];
+                if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) continue;
+
+                let altFt;
+                if (isGlobeFormat) {
+                    // Globe format: alt_baro at index 3, can be number (feet) or "ground"
+                    const alt = p1[3];
+                    altFt = (typeof alt === 'number') ? alt : (alt === 'ground' ? 0 : null);
+                } else {
+                    // Server proxy format: altitude in meters at index 3
+                    altFt = p1[3] != null ? Math.round(p1[3] * 3.28084) : null;
+                }
+
+                const color = getAltitudeColor(altFt);
+                const seg = L.polyline(
+                    [[lat1, lon1], [lat2, lon2]],
+                    { color: color, weight: 3, opacity: 0.85, interactive: false }
+                );
+                adsbLayerGroup.addLayer(seg);
+                trackSegments.push(seg);
+            }
+
+            // Set lastSelectedPos to the last point for live appending
+            const lastPt = trace[trace.length - 1];
+            if (lastPt[1] != null && lastPt[2] != null) {
+                let alt;
+                if (isGlobeFormat) {
+                    alt = typeof lastPt[3] === 'number' ? lastPt[3] : null;
+                } else {
+                    alt = lastPt[3] != null ? Math.round(lastPt[3] * 3.28084) : null;
+                }
+                lastSelectedPos = [lastPt[1], lastPt[2], alt];
+            }
+            console.log(`[Track] Drew ${trackSegments.length} trail segments`);
         }
 
         function updateAdsbMarkers(aircraftList) {

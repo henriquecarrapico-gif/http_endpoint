@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DIVS Gateway — API Documentation</title>
+    <meta name="description" content="DIVS Gateway HTTP Endpoint — API reference and documentation for the DOA Microphone Tower system.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: #0a0e1a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Subtle animated gradient background */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(ellipse at 20% 0%, rgba(56, 189, 248, 0.08) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 100%, rgba(168, 85, 247, 0.06) 0%, transparent 50%);
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 48px 24px 80px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .header-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            border-radius: 999px;
+            background: rgba(56, 189, 248, 0.1);
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            font-size: 11px;
+            font-weight: 600;
+            color: #38bdf8;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .header-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e2e8f0 0%, #94a3b8 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .quick-links {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .quick-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 18px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #cbd5e1;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .quick-link:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: #f1f5f9;
+            transform: translateY(-1px);
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 36px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #64748b;
+            margin-bottom: 14px;
+            padding-left: 2px;
+        }
+
+        /* Endpoint card */
+        .endpoint-card {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 8px;
+            transition: all 0.2s;
+            cursor: default;
+        }
+
+        .endpoint-card:hover {
+            border-color: rgba(255, 255, 255, 0.12);
+            background: rgba(15, 23, 42, 0.85);
+        }
+
+        .endpoint-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .method-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 5px;
+            min-width: 52px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .method-GET { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
+        .method-POST { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+        .method-PUT { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
+        .method-DELETE { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+
+        .endpoint-path {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+
+        .endpoint-path a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .endpoint-path a:hover {
+            text-decoration: underline;
+            text-underline-offset: 3px;
+        }
+
+        .endpoint-desc {
+            font-size: 13px;
+            color: #64748b;
+            margin-top: 6px;
+            padding-left: 64px;
+        }
+
+        .endpoint-params {
+            font-size: 12px;
+            color: #475569;
+            margin-top: 4px;
+            padding-left: 64px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .endpoint-params span {
+            color: #94a3b8;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 48px;
+            padding-top: 24px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            color: #475569;
+            font-size: 12px;
+        }
+
+        .footer a {
+            color: #64748b;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            color: #94a3b8;
+        }
+
+        /* Stats bar */
+        .stats {
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            margin: 24px 0 40px;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-badge"><span class="dot"></span> Online</div>
+            <h1>DIVS Gateway API</h1>
+            <p class="subtitle">DOA Microphone Tower — HTTP Endpoint & Map Interface</p>
+            <div class="quick-links">
+                <a href="/map" class="quick-link">🗺️ Live Map</a>
+                <a href="/nodes" class="quick-link">📡 Nodes</a>
+                <a href="/gateways" class="quick-link">🏗️ Gateways</a>
+                <a href="/api/adsb" class="quick-link">✈️ ADS-B</a>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value">{{ endpoint_count }}</div>
+                <div class="stat-label">Endpoints</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{ node_count }}</div>
+                <div class="stat-label">Nodes</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value">{{ gateway_count }}</div>
+                <div class="stat-label">Gateways</div>
+            </div>
+        </div>
+
+        <!-- Pages -->
+        <div class="section">
+            <div class="section-title">Pages</div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path"><a href="/map">/map</a></span>
+                </div>
+                <div class="endpoint-desc">Interactive live map with ADS-B aircraft tracking, LoRaWAN nodes, gateways, and DOA detection visualization.</div>
+            </div>
+        </div>
+
+        <!-- Node Management -->
+        <div class="section">
+            <div class="section-title">Node Management</div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path"><a href="/nodes">/nodes</a></span>
+                </div>
+                <div class="endpoint-desc">List all registered LoRaWAN sensor nodes with their positions, ranges, and gateway connections.</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-POST">POST</span>
+                    <span class="endpoint-path">/nodes</span>
+                </div>
+                <div class="endpoint-desc">Register a new sensor node.</div>
+                <div class="endpoint-params"><span>Body:</span> { dev_eui, name, lat, lon, range, altitude }</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-PUT">PUT</span>
+                    <span class="endpoint-path">/nodes/<span style="color:#94a3b8">&lt;dev_eui&gt;</span></span>
+                </div>
+                <div class="endpoint-desc">Update an existing node's properties (position, range, name).</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-DELETE">DELETE</span>
+                    <span class="endpoint-path">/nodes/<span style="color:#94a3b8">&lt;dev_eui&gt;</span></span>
+                </div>
+                <div class="endpoint-desc">Remove a node from the system.</div>
+            </div>
+        </div>
+
+        <!-- Gateway Management -->
+        <div class="section">
+            <div class="section-title">Gateway Management</div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path"><a href="/gateways">/gateways</a></span>
+                </div>
+                <div class="endpoint-desc">List all registered LoRaWAN gateways with positions and coverage ranges.</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-POST">POST</span>
+                    <span class="endpoint-path">/gateways</span>
+                </div>
+                <div class="endpoint-desc">Register a new gateway.</div>
+                <div class="endpoint-params"><span>Body:</span> { gateway_id, name, lat, lon, range, altitude }</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-PUT">PUT</span>
+                    <span class="endpoint-path">/gateways/<span style="color:#94a3b8">&lt;gateway_id&gt;</span></span>
+                </div>
+                <div class="endpoint-desc">Update a gateway's properties.</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-DELETE">DELETE</span>
+                    <span class="endpoint-path">/gateways/<span style="color:#94a3b8">&lt;gateway_id&gt;</span></span>
+                </div>
+                <div class="endpoint-desc">Remove a gateway from the system.</div>
+            </div>
+        </div>
+
+        <!-- Data Ingestion -->
+        <div class="section">
+            <div class="section-title">Data Ingestion</div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-POST">POST</span>
+                    <span class="endpoint-path">/uplink</span>
+                </div>
+                <div class="endpoint-desc">Chirpstack uplink webhook — receives LoRaWAN sensor data (DOA detections, mic-check heartbeats) and broadcasts via WebSocket.</div>
+                <div class="endpoint-params"><span>Body:</span> Chirpstack uplink JSON payload</div>
+            </div>
+        </div>
+
+        <!-- Detection & Classification -->
+        <div class="section">
+            <div class="section-title">Detection &amp; Classification</div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path"><a href="/detections/recent">/detections/recent</a></span>
+                </div>
+                <div class="endpoint-desc">Retrieve the most recent DOA detections from all nodes.</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path"><a href="/api/sound_classes">/api/sound_classes</a></span>
+                </div>
+                <div class="endpoint-desc">List all known sound classification categories used by the detection system.</div>
+            </div>
+        </div>
+
+        <!-- ADS-B -->
+        <div class="section">
+            <div class="section-title">ADS-B Aircraft Data (Proxied)</div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path"><a href="/api/adsb">/api/adsb</a></span>
+                </div>
+                <div class="endpoint-desc">Live aircraft positions within range. Proxied from adsb.lol — returns all aircraft near the configured map center.</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-GET">GET</span>
+                    <span class="endpoint-path">/api/adsb/track/<span style="color:#94a3b8">&lt;icao24&gt;</span></span>
+                </div>
+                <div class="endpoint-desc">Historical flight trail for a specific aircraft. Uses globe.adsb.lol trace data with OpenSky Network as fallback.</div>
+            </div>
+
+            <div class="endpoint-card">
+                <div class="endpoint-row">
+                    <span class="method-badge method-POST">POST</span>
+                    <span class="endpoint-path">/api/adsb/routeset</span>
+                </div>
+                <div class="endpoint-desc">Aircraft route lookup (origin → destination airports). Proxied from adsb.lol/adsb.im routeset API.</div>
+                <div class="endpoint-params"><span>Body:</span> { planes: [{ callsign, lat, lon }] }</div>
+            </div>
+        </div>
+
+        <div class="footer">
+            DIVS — Distributed Identification &amp; Verification System &nbsp;·&nbsp; <a href="/map">Open Map</a>
+        </div>
+    </div>
+</body>
+</html>

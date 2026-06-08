@@ -48,17 +48,29 @@ HEALTH_ERROR_CLASS_ID = 1023
 
 @app.route("/", methods=["GET"])
 def index():
-    endpoints = {}
-    for rule in app.url_map.iter_rules():
-        if rule.endpoint != 'static':
-            methods = ', '.join(sorted([m for m in rule.methods if m not in ['OPTIONS', 'HEAD']]))
-            endpoints[rule.rule] = f"Methods: {methods}"
-            
-    return jsonify({
-        "service": "DIVS Gateway HTTP Endpoint",
-        "description": "Flask API for handling Chirpstack integrations",
-        "endpoints": endpoints
-    }), 200
+    # Count endpoints
+    endpoint_count = sum(1 for rule in app.url_map.iter_rules() if rule.endpoint != 'static')
+
+    # Count nodes and gateways from database
+    node_count = 0
+    gateway_count = 0
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM nodes")
+        node_count = cur.fetchone()[0]
+        cur.execute("SELECT COUNT(*) FROM gateways")
+        gateway_count = cur.fetchone()[0]
+        cur.close()
+        conn.close()
+    except Exception:
+        pass
+
+    return render_template("index.html",
+        endpoint_count=endpoint_count,
+        node_count=node_count,
+        gateway_count=gateway_count
+    )
 
 @app.route("/map", methods=["GET"])
 def map_view():
@@ -729,10 +741,6 @@ def adsb_routeset_proxy():
     except Exception as e:
         app.logger.error(f"routeset proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-
-@app.route("/svg-tuner")
-def svg_tuner():
-    return render_template("svg_tuner.html")
 
 if __name__ == "__main__":
     socketio.run(app, host="0.0.0.0", port=5000)
