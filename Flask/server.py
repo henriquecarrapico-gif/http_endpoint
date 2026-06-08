@@ -662,9 +662,11 @@ def adsb_track_proxy(icao24):
                         alt_baro = point[3] if len(point) > 3 else None
                         track_deg = point[4] if len(point) > 4 else None
                         if lat is not None and lon is not None:
-                            # alt_baro is in feet in trace files, convert to meters
-                            alt_m = alt_baro * 0.3048 if alt_baro and isinstance(alt_baro, (int, float)) else None
-                            path.append([ts, lat, lon, alt_m, track_deg, False])
+                            # alt_baro can be a number (feet) or "ground" string
+                            alt_m = None
+                            if isinstance(alt_baro, (int, float)):
+                                alt_m = alt_baro * 0.3048
+                            path.append([ts, lat, lon, alt_m, track_deg, alt_baro == "ground"])
                     if len(path) >= 2:
                         app.logger.info(f"trace [{trace_url}] returned {len(path)} points")
                         return jsonify({"icao24": hex_lower, "path": path}), 200
