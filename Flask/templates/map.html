@@ -1235,41 +1235,20 @@
 
         function fetchAndShowTrack(icao24) {
             clearTrack();
-            const hex = icao24.toLowerCase();
-            const last2 = hex.slice(-2);
-            // Try globe.adsb.lol directly from the browser (avoids server proxy issues)
-            const traceUrl = `https://globe.adsb.lol/data/traces/${last2}/trace_full_${hex}.json`;
-            console.log('[Track] Fetching trace from', traceUrl);
-
-            fetch(traceUrl)
+            console.log('[Track] Fetching trace for', icao24, 'via server proxy');
+            fetch(`/api/adsb/track/${icao24}`)
                 .then(res => {
-                    if (!res.ok) throw new Error(`Globe HTTP ${res.status}`);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     return res.json();
                 })
-                .then(traceData => {
-                    if (!traceData.trace || traceData.trace.length < 2) {
-                        console.warn('[Track] Globe trace has no data');
-                        return;
+                .then(data => {
+                    if (data.path && Array.isArray(data.path) && data.path.length >= 2) {
+                        drawTraceSegments(data.path, false);
+                    } else {
+                        console.warn('[Track] No path data in response');
                     }
-                    // trace entries: [relTimestamp, lat, lon, alt_baro, gs, track, flags, vert_rate, {metadata}, ...]
-                    // alt_baro can be a number (feet) or "ground"
-                    drawTraceSegments(traceData.trace, true);
                 })
-                .catch(err => {
-                    console.warn('[Track] Globe direct fetch failed:', err.message, '— trying server proxy...');
-                    // Fallback: try the server proxy
-                    fetch(`/api/adsb/track/${icao24}`)
-                        .then(res => {
-                            if (!res.ok) throw new Error(`Proxy HTTP ${res.status}`);
-                            return res.json();
-                        })
-                        .then(data => {
-                            if (data.path && data.path.length >= 2) {
-                                drawTraceSegments(data.path, false);
-                            }
-                        })
-                        .catch(err2 => console.warn('[Track] All sources failed:', err2.message));
-                });
+                .catch(err => console.warn('[Track] Fetch error:', err.message));
         }
 
         // Draw colored trail segments from trace data

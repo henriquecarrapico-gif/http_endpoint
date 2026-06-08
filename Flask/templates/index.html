@@ -1,15 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DIVS Gateway — API Documentation</title>
-    <meta name="description" content="DIVS Gateway HTTP Endpoint — API reference and documentation for the DOA Microphone Tower system.">
+    <meta name="description"
+        content="DIVS Gateway HTTP Endpoint — API reference and documentation for the DOA Microphone Tower system.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
     <style>
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
 
         body {
             font-family: 'Inter', -apple-system, sans-serif;
@@ -70,8 +80,15 @@
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
         }
 
         h1 {
@@ -170,10 +187,25 @@
             flex-shrink: 0;
         }
 
-        .method-GET { background: rgba(74, 222, 128, 0.15); color: #4ade80; }
-        .method-POST { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
-        .method-PUT { background: rgba(251, 146, 60, 0.15); color: #fb923c; }
-        .method-DELETE { background: rgba(248, 113, 113, 0.15); color: #f87171; }
+        .method-GET {
+            background: rgba(74, 222, 128, 0.15);
+            color: #4ade80;
+        }
+
+        .method-POST {
+            background: rgba(96, 165, 250, 0.15);
+            color: #60a5fa;
+        }
+
+        .method-PUT {
+            background: rgba(251, 146, 60, 0.15);
+            color: #fb923c;
+        }
+
+        .method-DELETE {
+            background: rgba(248, 113, 113, 0.15);
+            color: #f87171;
+        }
 
         .endpoint-path {
             font-family: 'JetBrains Mono', monospace;
@@ -257,6 +289,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -267,7 +300,6 @@
                 <a href="/map" class="quick-link">🗺️ Live Map</a>
                 <a href="/nodes" class="quick-link">📡 Nodes</a>
                 <a href="/gateways" class="quick-link">🏗️ Gateways</a>
-                <a href="/api/adsb" class="quick-link">✈️ ADS-B</a>
             </div>
         </div>
 
@@ -295,7 +327,8 @@
                     <span class="method-badge method-GET">GET</span>
                     <span class="endpoint-path"><a href="/map">/map</a></span>
                 </div>
-                <div class="endpoint-desc">Interactive live map with ADS-B aircraft tracking, LoRaWAN nodes, gateways, and DOA detection visualization.</div>
+                <div class="endpoint-desc">Interactive live map with ADS-B aircraft tracking, LoRaWAN nodes, gateways,
+                    and DOA detection visualization.</div>
             </div>
         </div>
 
@@ -308,7 +341,8 @@
                     <span class="method-badge method-GET">GET</span>
                     <span class="endpoint-path"><a href="/nodes">/nodes</a></span>
                 </div>
-                <div class="endpoint-desc">List all registered LoRaWAN sensor nodes with their positions, ranges, and gateway connections.</div>
+                <div class="endpoint-desc">List all registered LoRaWAN sensor nodes with their positions, ranges, and
+                    gateway connections.</div>
             </div>
 
             <div class="endpoint-card">
@@ -346,7 +380,8 @@
                     <span class="method-badge method-GET">GET</span>
                     <span class="endpoint-path"><a href="/gateways">/gateways</a></span>
                 </div>
-                <div class="endpoint-desc">List all registered LoRaWAN gateways with positions and coverage ranges.</div>
+                <div class="endpoint-desc">List all registered LoRaWAN gateways with positions and coverage ranges.
+                </div>
             </div>
 
             <div class="endpoint-card">
@@ -384,7 +419,8 @@
                     <span class="method-badge method-POST">POST</span>
                     <span class="endpoint-path">/uplink</span>
                 </div>
-                <div class="endpoint-desc">Chirpstack uplink webhook — receives LoRaWAN sensor data (DOA detections, mic-check heartbeats) and broadcasts via WebSocket.</div>
+                <div class="endpoint-desc">Chirpstack uplink webhook — receives LoRaWAN sensor data (DOA detections,
+                    mic-check heartbeats) and broadcasts via WebSocket.</div>
                 <div class="endpoint-params"><span>Body:</span> Chirpstack uplink JSON payload</div>
             </div>
         </div>
@@ -406,7 +442,8 @@
                     <span class="method-badge method-GET">GET</span>
                     <span class="endpoint-path"><a href="/api/sound_classes">/api/sound_classes</a></span>
                 </div>
-                <div class="endpoint-desc">List all known sound classification categories used by the detection system.</div>
+                <div class="endpoint-desc">List all known sound classification categories used by the detection system.
+                </div>
             </div>
         </div>
 
@@ -419,7 +456,8 @@
                     <span class="method-badge method-GET">GET</span>
                     <span class="endpoint-path"><a href="/api/adsb">/api/adsb</a></span>
                 </div>
-                <div class="endpoint-desc">Live aircraft positions within range. Proxied from adsb.lol — returns all aircraft near the configured map center.</div>
+                <div class="endpoint-desc">Live aircraft positions within range. Proxied from adsb.lol — returns all
+                    aircraft near the configured map center.</div>
             </div>
 
             <div class="endpoint-card">
@@ -427,7 +465,8 @@
                     <span class="method-badge method-GET">GET</span>
                     <span class="endpoint-path">/api/adsb/track/<span style="color:#94a3b8">&lt;icao24&gt;</span></span>
                 </div>
-                <div class="endpoint-desc">Historical flight trail for a specific aircraft. Uses globe.adsb.lol trace data with OpenSky Network as fallback.</div>
+                <div class="endpoint-desc">Historical flight trail for a specific aircraft. Uses globe.adsb.lol trace
+                    data with OpenSky Network as fallback.</div>
             </div>
 
             <div class="endpoint-card">
@@ -435,14 +474,16 @@
                     <span class="method-badge method-POST">POST</span>
                     <span class="endpoint-path">/api/adsb/routeset</span>
                 </div>
-                <div class="endpoint-desc">Aircraft route lookup (origin → destination airports). Proxied from adsb.lol/adsb.im routeset API.</div>
+                <div class="endpoint-desc">Aircraft route lookup (origin → destination airports). Proxied from
+                    adsb.lol/adsb.im routeset API.</div>
                 <div class="endpoint-params"><span>Body:</span> { planes: [{ callsign, lat, lon }] }</div>
             </div>
         </div>
 
         <div class="footer">
-            DIVS — Distributed Identification &amp; Verification System &nbsp;·&nbsp; <a href="/map">Open Map</a>
+            DIVS — Drones Intervenção Vigilância e Segurança &nbsp;·&nbsp; <a href="/map">Open Map</a>
         </div>
     </div>
 </body>
+
 </html>
