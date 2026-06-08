@@ -197,39 +197,28 @@
 
         /* ADS-B aircraft markers */
         .adsb-aircraft-icon {
-            font-size: 20px;
-            text-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
             transition: transform 0.3s ease;
             cursor: pointer;
+            line-height: 0;
+        }
+
+        .adsb-aircraft-icon svg {
+            display: block;
+            width: 100%;
+            height: 100%;
         }
 
         .adsb-aircraft-icon.ground {
             opacity: 0.5;
         }
 
-        .adsb-popup-table {
-            font-size: 12px;
-            border-collapse: collapse;
-            width: 100%;
-        }
-
-        .adsb-popup-table td {
-            padding: 2px 6px;
-        }
-
-        .adsb-popup-table td:first-child {
-            font-weight: 600;
-            color: #555;
-            white-space: nowrap;
-        }
-
         .adsb-callsign-tooltip {
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0, 0, 0, 0.75);
             border: none;
             color: #fff;
             font-size: 10px;
             font-weight: 600;
-            padding: 2px 5px;
+            padding: 2px 6px;
             border-radius: 3px;
             box-shadow: none;
             letter-spacing: 0.5px;
@@ -239,17 +228,152 @@
             border: none;
         }
 
-        .adsb-link {
-            display: inline-block;
-            margin-top: 6px;
-            color: #2563eb;
+        /* ─── ADS-B Detail Panel (globe.adsb.lol style) ─── */
+        #adsb-detail-panel {
+            position: absolute;
+            top: 0;
+            left: -320px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(15, 20, 35, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 1001;
+            transition: left 0.3s cubic-bezier(0.4,0,0.2,1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 24px rgba(0,0,0,0.5);
+            border-right: 1px solid rgba(255,255,255,0.06);
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-size: 12px;
+            color: #c8d6e5;
+        }
+
+        #adsb-detail-panel.open {
+            left: 0;
+        }
+
+        .adp-header {
+            padding: 12px 14px 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            position: relative;
+        }
+
+        .adp-close {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 16px;
+            line-height: 22px;
+            text-align: center;
+            border-radius: 3px;
+            transition: all 0.15s;
+        }
+
+        .adp-close:hover {
+            background: rgba(255,255,255,0.1);
+            color: #f1f5f9;
+        }
+
+        .adp-callsign {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: 1px;
+        }
+
+        .adp-subtitle {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .adp-section-title {
+            background: rgba(255,255,255,0.04);
+            padding: 4px 14px;
+            font-size: 10px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #64748b;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .adp-section {
+            padding: 6px 14px;
+        }
+
+        .adp-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .adp-row:last-child {
+            border-bottom: none;
+        }
+
+        .adp-label {
+            color: #94a3b8;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+
+        .adp-value {
+            color: #e2e8f0;
+            font-weight: 500;
+            text-align: right;
+            font-size: 12px;
+        }
+
+        .adp-route-row {
+            padding: 6px 14px;
+            text-align: center;
+        }
+
+        .adp-route-airports {
+            font-size: 16px;
+            font-weight: 700;
+            color: #f1f5f9;
+            letter-spacing: 2px;
+        }
+
+        .adp-route-arrow {
+            color: #3b82f6;
+            margin: 0 6px;
+        }
+
+        .adp-route-loading {
+            color: #475569;
+            font-size: 11px;
+            font-style: italic;
+        }
+
+        .adp-links {
+            padding: 8px 14px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .adp-links a {
+            color: #3b82f6;
             text-decoration: none;
             font-size: 11px;
             font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
         }
 
-        .adsb-link:hover {
+        .adp-links a:hover {
             text-decoration: underline;
+            color: #60a5fa;
         }
     </style>
 </head>
@@ -258,6 +382,48 @@
 
     <div id="map-container">
         <div id="map"></div>
+
+        <!-- ADS-B Aircraft Detail Panel (globe.adsb.lol style) -->
+        <div id="adsb-detail-panel">
+            <div class="adp-header">
+                <div class="adp-close" id="adp-close-btn">✕</div>
+                <div class="adp-callsign" id="adp-callsign">—</div>
+                <div class="adp-subtitle" id="adp-subtitle">—</div>
+            </div>
+
+            <div class="adp-section-title">Registration</div>
+            <div class="adp-section">
+                <div class="adp-row"><span class="adp-label">ICAO Hex</span><span class="adp-value" id="adp-hex">—</span></div>
+                <div class="adp-row"><span class="adp-label">Reg.</span><span class="adp-value" id="adp-reg">—</span></div>
+                <div class="adp-row"><span class="adp-label">Type</span><span class="adp-value" id="adp-type">—</span></div>
+                <div class="adp-row"><span class="adp-label">Squawk</span><span class="adp-value" id="adp-squawk">—</span></div>
+            </div>
+
+            <div class="adp-section-title">Route</div>
+            <div class="adp-route-row" id="adp-route-container">
+                <span class="adp-route-loading" id="adp-route-text">Click an aircraft...</span>
+            </div>
+
+            <div class="adp-section-title">Spatial</div>
+            <div class="adp-section">
+                <div class="adp-row"><span class="adp-label">Groundspeed</span><span class="adp-value" id="adp-speed">—</span></div>
+                <div class="adp-row"><span class="adp-label">Baro. Altitude</span><span class="adp-value" id="adp-alt">—</span></div>
+                <div class="adp-row"><span class="adp-label">Vert. Rate</span><span class="adp-value" id="adp-vrate">—</span></div>
+                <div class="adp-row"><span class="adp-label">Track</span><span class="adp-value" id="adp-track">—</span></div>
+                <div class="adp-row"><span class="adp-label">Position</span><span class="adp-value" id="adp-pos">—</span></div>
+            </div>
+
+            <div class="adp-section-title">Signal</div>
+            <div class="adp-section">
+                <div class="adp-row"><span class="adp-label">Source</span><span class="adp-value" id="adp-source">—</span></div>
+                <div class="adp-row"><span class="adp-label">RSSI</span><span class="adp-value" id="adp-rssi">—</span></div>
+                <div class="adp-row"><span class="adp-label">Messages</span><span class="adp-value" id="adp-msgs">—</span></div>
+            </div>
+
+            <div class="adp-links">
+                <a id="adp-globe-link" href="#" target="_blank" rel="noopener">🌐 View on globe.adsb.lol</a>
+            </div>
+        </div>
 
 
 
@@ -333,6 +499,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.js"></script>
     <!-- Leaflet Geocoder JS -->
     <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <!-- tar1090-style embedded aircraft shapes -->
+    <script src="/static/aircraft_shapes.js"></script>
     <script>
         // Initialize the map, centered on specific coordinates
         const worldBounds = [
@@ -446,97 +614,177 @@
             return parseInt(altBaro).toLocaleString() + ' ft';
         }
 
-        // ─── Aircraft SVG Icon System (RexKramer1/AircraftShapesSVG) ───
-        // Per-type-code SVGs loaded from /static/AircraftShapesSVG/Shapes SVG/
-        const TYPE_CODE_SVGS = {};   // Cache: typeCode → cleaned SVG string, or null if 404
-        const TYPE_SVG_BASE = '/static/AircraftShapesSVG/Shapes%20SVG/';
-        const ICON_SIZE = 30;        // px size for all aircraft icons
+        // ─── Aircraft Icon System (tar1090-style embedded paths) ───
+        // Uses AIRCRAFT_SHAPES from aircraft_shapes.js – no external SVG fetching
+        const BASE_ICON_H = 28;   // base icon height in pixels
 
-        // Fallback inline SVG (generic airliner silhouette)
-        const FALLBACK_SVG = '<svg viewBox="0 0 32 32"><path d="M16 1 L14.5 8 L3 15 L3 17 L14.5 14 L14.5 25 L10 28 L10 30 L16 27.5 L22 30 L22 28 L17.5 25 L17.5 14 L29 17 L29 15 L17.5 8 Z"/></svg>';
-
-        // Clean raw SVG from Inkscape: strip metadata, remove fill/stroke so we control colors
-        function cleanSvg(rawSvg) {
-            const match = rawSvg.match(/<svg[\s\S]*<\/svg>/i);
-            if (!match) return null;
-            let svg = match[0];
-            // Remove Inkscape/sodipodi elements
-            svg = svg.replace(/<sodipodi:[\s\S]*?<\/sodipodi:[^>]*>/gi, '');
-            svg = svg.replace(/<metadata[\s\S]*?<\/metadata>/gi, '');
-            svg = svg.replace(/<defs[\s\S]*?<\/defs>/gi, '');
-            // Remove Inkscape/sodipodi attributes
-            svg = svg.replace(/\s*(inkscape|sodipodi):[a-z-]+="[^"]*"/gi, '');
-            // Remove existing styling so we can apply our own colors
-            svg = svg.replace(/\s*style="[^"]*"/gi, '');
-            svg = svg.replace(/\s*fill="[^"]*"/gi, '');
-            svg = svg.replace(/\s*stroke="[^"]*"/gi, '');
-            svg = svg.replace(/\s*stroke-width="[^"]*"/gi, '');
-            svg = svg.replace(/\s*stroke-linecap="[^"]*"/gi, '');
-            svg = svg.replace(/\s*stroke-linejoin="[^"]*"/gi, '');
-            svg = svg.replace(/\s*stroke-opacity="[^"]*"/gi, '');
-            // Remove width/height (we size via CSS, viewBox handles aspect ratio)
-            svg = svg.replace(/\s*width="[^"]*"/gi, '');
-            svg = svg.replace(/\s*height="[^"]*"/gi, '');
-            return svg;
+        // Category → scale multiplier (tar1090 convention)
+        function getCategoryScale(category) {
+            if (!category) return 0.8;
+            const c = category.toUpperCase();
+            if (c === 'A1' || c === 'A2') return 0.6;   // light
+            if (c === 'A3') return 0.85;                  // large
+            if (c === 'A4' || c === 'A5') return 1.0;    // heavy / high-vortex
+            if (c === 'A6' || c === 'A7') return 1.0;    // high performance / rotorcraft
+            if (c === 'B1' || c === 'B2') return 0.65;   // helicopter / glider
+            if (c === 'B4' || c === 'B6') return 0.5;    // UAV / drone
+            if (c === 'C1' || c === 'C2' || c === 'C3') return 0.4; // ground vehicle
+            return 0.8;
         }
 
-        // Async loader with 404 caching — never refetches a failed type
-        async function loadTypeCodeSvg(typeCode) {
-            if (!typeCode) return null;
-            const t = typeCode.toUpperCase();
-            if (t in TYPE_CODE_SVGS) return TYPE_CODE_SVGS[t];
-            try {
-                const resp = await fetch(`${TYPE_SVG_BASE}${encodeURIComponent(t)}.svg`);
-                if (!resp.ok) { TYPE_CODE_SVGS[t] = null; return null; }
-                const raw = await resp.text();
-                const cleaned = cleanSvg(raw);
-                TYPE_CODE_SVGS[t] = cleaned;
-                return cleaned;
-            } catch { TYPE_CODE_SVGS[t] = null; return null; }
+        // Build an SVG string from embedded shape data
+        function buildAircraftSvg(typeCode, color) {
+            const key = (typeCode || '').toLowerCase().replace(/\s+/g, '_');
+            const shape = AIRCRAFT_SHAPES[key];
+            if (shape) {
+                const sw = shape.strokeScale ? (0.4 * (shape.strokeScale || 1)) : 0.5;
+                return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${shape.viewBox}"><path d="${shape.path}" fill="${color}" stroke="#000" stroke-width="${sw}" stroke-linejoin="round"/></svg>`;
+            }
+            // Fallback: generic airliner shape
+            return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-1 -2 34 34"><path d="M16 1c-.17 0-.67.58-.9 1.03-.6 1.21-.6 1.15-.65 5.2-.04 2.97-.08 3.77-.18 3.9-.15.17-1.82 1.1-1.98 1.1-.08 0-.1-.25-.05-.83.03-.5.01-.92-.05-1.08-.1-.25-.13-.26-.71-.26-.82 0-.86.07-.78 1.5.03.6.08 1.17.11 1.25.05.12-.02.2-.25.33l-8 4.2c-.2.2-.18.1-.19 1.29 3.9-1.2 3.71-1.21 3.93-1.21.06 0 .1 0 .13.14.08.3.28.3.28-.04 0-.25.03-.27 1.16-.6.65-.2 1.22-.35 1.28-.35.05 0 .12.04.15.17.07.3.27.27.27-.08 0-.25.01-.27.7-.47.68-.1.98-.09 1.47-.1.18 0 .22 0 .26.18.06.34.22.35.27-.01.04-.2.1-.17 1.06-.14l1.07.02.05 4.2c.05 3.84.07 4.28.26 5.09.11.49.2.99.2 1.11 0 .19-.31.43-1.93 1.5l-1.93 1.26v1.02l4.13-.95.63 1.54c.05.07.12.09.19.09s.14-.02.19-.09l.63-1.54 4.13.95V29.3l-1.93-1.27c-1.62-1.06-1.93-1.3-1.93-1.49 0-.12.09-.62.2-1.11.19-.81.2-1.25.26-5.09l.05-4.2 1.07-.02c.96-.03 1.02-.05 1.06.14.05.36.21.35.27 0 .04-.17.08-.16.26-.16.49 0 .8-.02 1.48.1.68.2.69.21.69.46 0 .35.2.38.27.08.03-.13.1-.17.15-.17.06 0 .63.15 1.28.34 1.13.34 1.16.36 1.16.61 0 .35.2.34.28.04.03-.13.07-.14.13-.14.22 0 .03 0 3.93 1.2-.01-1.18.02-1.07-.19-1.27l-8-4.21c-.23-.12-.3-.21-.25-.33.03-.08.08-.65.11-1.25.08-1.43.04-1.5-.78-1.5-.58 0-.61.01-.71.26-.06.16-.08.58-.05 1.08.04.58.03.83-.05.83-.16 0-1.83-.93-1.98-1.1-.1-.13-.14-.93-.18-3.9-.05-4.05-.05-3.99-.65-5.2C16.67 1.58 16.17 1 16 1z" fill="${color}" stroke="#000" stroke-width="0.5" stroke-linejoin="round"/></svg>`;
         }
 
-        // Get SVG for an aircraft — cached type-code SVG or fallback
-        function getAircraftSvg(typeCode) {
-            const t = (typeCode || '').toUpperCase();
-            if (t && TYPE_CODE_SVGS[t]) return TYPE_CODE_SVGS[t];
-            return FALLBACK_SVG;
+        // Compute icon pixel size from shape data + category
+        function getIconSize(typeCode, category) {
+            const key = (typeCode || '').toLowerCase().replace(/\s+/g, '_');
+            const shape = AIRCRAFT_SHAPES[key];
+            const scale = getCategoryScale(category);
+            const h = BASE_ICON_H * scale;
+            if (shape && shape.w && shape.h) {
+                const aspect = shape.w / shape.h;
+                return [Math.round(h * aspect), Math.round(h)];
+            }
+            return [Math.round(h), Math.round(h)];
         }
 
-        // Apply tar1090-style coloring: filled silhouette + dark stroke outline
-        function colorSvgIcon(svgHtml, color) {
-            return svgHtml.replace('<svg ',
-                `<svg style="fill:${color};stroke:#000;stroke-width:0.3;width:100%;height:100%;filter:drop-shadow(0 0 2px rgba(0,0,0,0.5))" `);
-        }
+        // ─── Detail Panel + Route Logic ───
+        let routePolyline = null;      // dotted line to destination airport
+        let selectedAcData = null;     // currently displayed aircraft data
 
-
-        function createAdsbPopup(ac) {
+        function showDetailPanel(ac) {
+            selectedAcData = ac;
+            const panel = document.getElementById('adsb-detail-panel');
             const callsign = (ac.flight || '').trim() || '—';
             const reg = ac.r || '—';
             const type = ac.t || '—';
+            const hex = ac.hex.toUpperCase();
             const alt = formatAltitude(ac.alt_baro);
             const gs = ac.gs != null ? Math.round(ac.gs) + ' kts' : '—';
             const squawk = ac.squawk || '—';
             const heading = ac.track != null ? Math.round(ac.track) + '°' : '—';
-            const vr = ac.baro_rate != null ? (ac.baro_rate > 0 ? '+' : '') + ac.baro_rate + ' ft/min' : '—';
-            const hex = ac.hex.toUpperCase();
-            const globeUrl = `https://globe.adsb.lol/?icao=${ac.hex}`;
+            const vr = ac.baro_rate != null ? (ac.baro_rate > 0 ? '▲ +' : '▼ ') + ac.baro_rate + ' ft/m' : '—';
+            const pos = (ac.lat != null && ac.lon != null) ? `${ac.lat.toFixed(4)}, ${ac.lon.toFixed(4)}` : '—';
+            const source = ac.type || '—';
+            const rssi = ac.rssi != null ? ac.rssi.toFixed(1) + ' dBFS' : '—';
+            const msgs = ac.messages != null ? ac.messages.toLocaleString() : '—';
 
-            return `<div style="min-width:180px">
-                <div style="font-weight:700;font-size:14px;margin-bottom:4px;border-bottom:1px solid #ddd;padding-bottom:3px">
-                    ✈️ ${callsign}
-                </div>
-                <table class="adsb-popup-table">
-                    <tr><td>ICAO</td><td>${hex}</td></tr>
-                    <tr><td>Reg</td><td>${reg}</td></tr>
-                    <tr><td>Type</td><td>${type}</td></tr>
-                    <tr><td>Altitude</td><td>${alt}</td></tr>
-                    <tr><td>Speed</td><td>${gs}</td></tr>
-                    <tr><td>Heading</td><td>${heading}</td></tr>
-                    <tr><td>V/S</td><td>${vr}</td></tr>
-                    <tr><td>Squawk</td><td>${squawk}</td></tr>
-                </table>
-                <a class="adsb-link" href="${globeUrl}" target="_blank" rel="noopener">🌐 Full history on adsb.lol</a>
-            </div>`;
+            document.getElementById('adp-callsign').textContent = callsign;
+            document.getElementById('adp-subtitle').textContent = `${type} · ${reg}`;
+            document.getElementById('adp-hex').textContent = hex;
+            document.getElementById('adp-reg').textContent = reg;
+            document.getElementById('adp-type').textContent = type;
+            document.getElementById('adp-squawk').textContent = squawk;
+            document.getElementById('adp-speed').textContent = gs;
+            document.getElementById('adp-alt').textContent = alt;
+            document.getElementById('adp-vrate').textContent = vr;
+            document.getElementById('adp-track').textContent = heading;
+            document.getElementById('adp-pos').textContent = pos;
+            document.getElementById('adp-source').textContent = source;
+            document.getElementById('adp-rssi').textContent = rssi;
+            document.getElementById('adp-msgs').textContent = msgs;
+            document.getElementById('adp-globe-link').href = `https://globe.adsb.lol/?icao=${ac.hex}`;
+            document.getElementById('adp-route-text').textContent = 'Loading route...';
+            document.getElementById('adp-route-text').className = 'adp-route-loading';
+
+            panel.classList.add('open');
+
+            // Fetch route info
+            fetchRoute(ac);
+        }
+
+        function hideDetailPanel() {
+            document.getElementById('adsb-detail-panel').classList.remove('open');
+            selectedAcData = null;
+            clearRoutePolyline();
+        }
+
+        function clearRoutePolyline() {
+            if (routePolyline) {
+                adsbLayerGroup.removeLayer(routePolyline);
+                routePolyline = null;
+            }
+        }
+
+        // Panel close handler
+        document.getElementById('adp-close-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideDetailPanel();
+        });
+
+        // Route fetching via adsb.lol routeset API
+        function fetchRoute(ac) {
+            const callsign = (ac.flight || '').trim();
+            if (!callsign || ac.lat == null || ac.lon == null) {
+                document.getElementById('adp-route-text').textContent = 'No route data';
+                return;
+            }
+
+            fetch('/api/adsb/routeset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    planes: [{ callsign: callsign, lat: ac.lat, lng: ac.lon }]
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (!selectedAcData || selectedAcData.hex !== ac.hex) return; // stale
+
+                // Parse the route response
+                // Format: array of objects with _airports array [{icao, iata, name, lat, lon}]
+                let routeStr = null;
+                let destLat = null, destLon = null;
+
+                if (Array.isArray(data) && data.length > 0 && data[0]._airports) {
+                    const airports = data[0]._airports;
+                    if (airports.length >= 2) {
+                        const orig = airports[0];
+                        const dest = airports[airports.length - 1];
+                        routeStr = `<span class="adp-route-airports">${orig.icao || orig.iata}<span class="adp-route-arrow"> → </span>${dest.icao || dest.iata}</span>`;
+                        if (dest.lat != null && dest.lon != null) {
+                            destLat = dest.lat;
+                            destLon = dest.lon;
+                        }
+                    } else if (airports.length === 1) {
+                        routeStr = airports[0].icao || airports[0].iata || 'Unknown';
+                    }
+                }
+
+                const routeEl = document.getElementById('adp-route-text');
+                if (routeStr) {
+                    routeEl.innerHTML = routeStr;
+                    routeEl.className = '';
+                } else {
+                    routeEl.textContent = 'No route data';
+                    routeEl.className = 'adp-route-loading';
+                }
+
+                // Draw dotted line to destination
+                clearRoutePolyline();
+                if (destLat != null && destLon != null && ac.lat != null && ac.lon != null) {
+                    routePolyline = L.polyline(
+                        [[ac.lat, ac.lon], [destLat, destLon]],
+                        { color: '#9ca3af', weight: 1.5, opacity: 0.6, dashArray: '4, 6', interactive: false }
+                    );
+                    adsbLayerGroup.addLayer(routePolyline);
+                }
+            })
+            .catch(() => {
+                if (selectedAcData && selectedAcData.hex === ac.hex) {
+                    document.getElementById('adp-route-text').textContent = 'Route unavailable';
+                    document.getElementById('adp-route-text').className = 'adp-route-loading';
+                }
+            });
         }
 
         function clearTrack() {
@@ -584,51 +832,37 @@
                     // Update existing marker position & rotation
                     const existing = adsbMarkers[ac.hex];
                     existing.marker.setLatLng([ac.lat, ac.lon]);
+                    existing.acData = ac; // keep latest data
                     const el = existing.marker.getElement();
                     if (el) {
                         el.style.transform = el.style.transform.replace(/rotate\([^)]*\)/, '') + ` rotate(${rotation}deg)`;
                         const svgEl = el.querySelector('svg');
-                        if (svgEl) svgEl.style.fill = color;
+                        if (svgEl) {
+                            const pathEl = svgEl.querySelector('path');
+                            if (pathEl) pathEl.setAttribute('fill', color);
+                        }
                     }
-                    existing.marker.setPopupContent(createAdsbPopup(ac));
                     if (callsign) existing.marker.setTooltipContent(callsign);
+                    // Update detail panel if this is the selected aircraft
+                    if (selectedAcData && selectedAcData.hex === ac.hex) {
+                        showDetailPanel(ac);
+                    }
                 } else {
-                    // Create new marker with type-specific SVG icon
-                    const svgHtml = getAircraftSvg(ac.t);
-                    const iconHtml = colorSvgIcon(svgHtml, color);
-                    const iconSize = [ICON_SIZE, ICON_SIZE];
+                    // Create new marker with tar1090-style embedded SVG
+                    const svgHtml = buildAircraftSvg(ac.t, color);
+                    const iconSize = getIconSize(ac.t, ac.category);
                     const icon = L.divIcon({
-                        html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="transform:rotate(${rotation}deg)">${iconHtml}</div>`,
+                        html: `<div class="adsb-aircraft-icon ${isGround ? 'ground' : ''}" style="transform:rotate(${rotation}deg);width:${iconSize[0]}px;height:${iconSize[1]}px">${svgHtml}</div>`,
                         className: '',
                         iconSize: iconSize,
                         iconAnchor: [iconSize[0] / 2, iconSize[1] / 2]
                     });
-
-                    // Lazy-load per-type SVG — if it arrives, swap the marker icon
-                    if (ac.t && !(ac.t.toUpperCase() in TYPE_CODE_SVGS)) {
-                        loadTypeCodeSvg(ac.t).then(typeSvg => {
-                            if (typeSvg && adsbMarkers[ac.hex]) {
-                                const m = adsbMarkers[ac.hex].marker;
-                                const curColor = getAltitudeColor(ac.alt_baro);
-                                const newHtml = colorSvgIcon(typeSvg, curColor);
-                                const newIcon = L.divIcon({
-                                    html: `<div class="adsb-aircraft-icon" style="transform:rotate(${ac.track || 0}deg)">${newHtml}</div>`,
-                                    className: '',
-                                    iconSize: [ICON_SIZE, ICON_SIZE],
-                                    iconAnchor: [ICON_SIZE / 2, ICON_SIZE / 2]
-                                });
-                                m.setIcon(newIcon);
-                            }
-                        });
-                    }
 
                     const marker = L.marker([ac.lat, ac.lon], {
                         icon: icon,
                         interactive: true,
                         zIndexOffset: isGround ? -1000 : (ac.alt_baro || 0)
                     });
-
-                    marker.bindPopup(createAdsbPopup(ac), { maxWidth: 250, autoPan: false });
 
                     if (callsign) {
                         marker.bindTooltip(callsign, {
@@ -639,14 +873,15 @@
                         });
                     }
 
-                    // Fetch and show track on click
+                    // On click: show detail panel + fetch track
                     marker.on('click', function () {
                         selectedAircraftHex = ac.hex;
+                        showDetailPanel(adsbMarkers[ac.hex]?.acData || ac);
                         fetchAndShowTrack(ac.hex);
                     });
 
                     adsbLayerGroup.addLayer(marker);
-                    adsbMarkers[ac.hex] = { marker };
+                    adsbMarkers[ac.hex] = { marker, acData: ac };
                 }
             });
 
@@ -655,6 +890,10 @@
                 if (!seenHex.has(hex)) {
                     adsbLayerGroup.removeLayer(adsbMarkers[hex].marker);
                     delete adsbMarkers[hex];
+                    // If the removed aircraft was selected, hide the panel
+                    if (selectedAcData && selectedAcData.hex === hex) {
+                        hideDetailPanel();
+                    }
                 }
             });
         }

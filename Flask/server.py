@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 from flask_socketio import SocketIO
 import psycopg2
-from urllib.request import urlopen
+from urllib.request import urlopen, Request
 from urllib.error import URLError
 import json
 from psycopg2.extras import execute_values
@@ -649,6 +649,28 @@ def adsb_track_proxy(icao24):
         return jsonify({"status": "error", "message": "Failed to fetch track data"}), 502
     except Exception as e:
         app.logger.error(f"OpenSky track proxy error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route("/api/adsb/routeset", methods=["POST"])
+def adsb_routeset_proxy():
+    """Proxy to adsb.lol /api/0/routeset endpoint for aircraft route data."""
+    try:
+        body = request.get_json(force=True)
+        encoded = json.dumps(body).encode("utf-8")
+        req = Request(
+            "https://api.adsb.lol/api/0/routeset",
+            data=encoded,
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        with urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode())
+        return jsonify(data), 200
+    except URLError as e:
+        app.logger.error(f"adsb.lol routeset fetch failed: {e}")
+        return jsonify({"status": "error", "message": "Failed to fetch route data"}), 502
+    except Exception as e:
+        app.logger.error(f"routeset proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/svg-tuner")
