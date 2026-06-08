@@ -650,26 +650,66 @@ def adsb_proxy():
 
 @app.route("/api/adsb/track/<icao24>", methods=["GET"])
 def adsb_track_proxy(icao24):
-    """Proxy to OpenSky Network /tracks/all endpoint for aircraft trail data."""
-    try:
-        import ssl
-        ctx = ssl.create_default_context()
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
+    """Proxy for aircraft trail data.
+    Tries globe.adsb.lol (full trace) first, then OpenSky."""
+    import ssl
 
-        url = f"https://opensky-network.org/api/tracks/all?icao24={icao24.lower()}&time=0"
-        app.logger.info(f"track: fetching {url}")
-        req = Request(url, headers={"User-Agent": "Mozilla/5.0 (X11; Linux) DIVSGateway/1.0"})
+    hex_lower = icao24.lower()
+    ctx = ssl.create_default_context()
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE
+    ua = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120 DIVSGateway/1.0"
+
+    def parse_globe_trace(trace_data):
+        """Parse globe.adsb.lol trace format into our path format."""
+        path = []
+        for point in trace_data:
+            if len(point) < 3:
+                continue
+            lat = point[1]
+            lon = point[2]
+            alt_baro = point[3] if len(point) > 3 else None
+            track_deg = point[5] if len(point) > 5 else None
+            ts = point[0] if len(point) > 0 else 0
+            if lat is not None and lon is not None:
+                alt_m = None
+                if isinstance(alt_baro, (int, float)):
+                    alt_m = alt_baro * 0.3048
+                path.append([ts, lat, lon, alt_m, track_deg, alt_baro == "ground"])
+        return path
+
+    # Try 1: globe.adsb.lol trace JSON (full flight history)
+    last2 = hex_lower[-2:]
+    trace_url = f"https://globe.adsb.lol/data/traces/{last2}/trace_full_{hex_lower}.json"
+    try:
+        app.logger.info(f"track: trying globe trace for {hex_lower}")
+        req = Request(trace_url, headers={"User-Agent": ua, "Accept": "application/json"})
+        with urlopen(req, timeout=15, context=ctx) as resp:
+            raw = resp.read().decode()
+            app.logger.info(f"track: globe returned {len(raw)} bytes (status {resp.getcode()})")
+            if raw.strip():
+                trace_data = json.loads(raw)
+                if "trace" in trace_data and len(trace_data["trace"]) >= 2:
+                    path = parse_globe_trace(trace_data["trace"])
+                    if len(path) >= 2:
+                        app.logger.info(f"track: globe returned {len(path)} points for {hex_lower}")
+                        return jsonify({"icao24": hex_lower, "path": path}), 200
+    except Exception as e:
+        app.logger.warning(f"track: globe failed for {hex_lower}: {type(e).__name__}: {e}")
+
+    # Try 2: OpenSky Network
+    try:
+        url = f"https://opensky-network.org/api/tracks/all?icao24={hex_lower}&time=0"
+        app.logger.info(f"track: trying OpenSky for {hex_lower}")
+        req = Request(url, headers={"User-Agent": ua})
         with urlopen(req, timeout=15, context=ctx) as resp:
             data = json.loads(resp.read().decode())
         app.logger.info(f"track: OpenSky returned {len(data.get('path', []))} points")
         return jsonify(data), 200
-    except URLError as e:
-        app.logger.warning(f"OpenSky track failed for {icao24}: {e}")
-        return jsonify({"status": "error", "message": f"OpenSky failed: {e}"}), 502
     except Exception as e:
-        app.logger.error(f"track proxy error for {icao24}: {type(e).__name__}: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 502
+        app.logger.warning(f"track: OpenSky failed for {hex_lower}: {type(e).__name__}: {e}")
+
+    return jsonify({"status": "error", "message": "No trail data available"}), 502
 
 @app.route("/api/adsb/routeset", methods=["POST"])
 def adsb_routeset_proxy():
