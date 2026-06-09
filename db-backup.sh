@@ -3,10 +3,11 @@
 # DIVS Gateway — PostgreSQL Backup & Restore Sidecar
 # Runs alongside the postgres container.
 #
-#  • On startup: if DB is empty, restores from latest backup
+#  • On startup: if DB tables have 0 rows, restores from latest backup
 #  • Daily at 03:00 UTC: runs pg_dump → compressed .sql.gz
 #  • On docker compose down (SIGTERM): runs one final backup
 #  • Retention: keeps max 10 files, deletes files older than 7 days
+#  • Logs row counts at every backup and on startup for auditing
 # ─────────────────────────────────────────────────────────
 
 set -euo pipefail
@@ -23,6 +24,12 @@ log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') | [BACKUP] $*"
 }
 
+# Helper: run a psql command and return the output
+run_psql() {
+    PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
+        -U "$DB_USER" -d "$DB_NAME" -tAc "$1"
+}
+
 # ─── Wait for Postgres ────────────────────────────────────
 wait_for_postgres() {
     log "Waiting for PostgreSQL at ${DB_HOST}:${DB_PORT}..."
@@ -32,13 +39,42 @@ wait_for_postgres() {
     log "PostgreSQL is ready."
 }
 
-# ─── Check if DB has any user tables ──────────────────────
-db_is_empty() {
-    local count
-    count=$(PGPASSWORD="$POSTGRES_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" \
-        -U "$DB_USER" -d "$DB_NAME" -tAc \
-        "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';")
-    [ "$count" -eq 0 ]
+# ─── Count rows in all public tables ─────────────────────
+# Outputs lines like: "nodes: 3" "gateways: 2" "detections: 1542"
+# Returns total row count via stdout (last line)
+snapshot_row_counts() {
+    local label="$1"  # e.g. "Startup" or "Pre-backup"
+    local total=0
+
+    # Get list of public tables
+    local tables
+    tables=$(run_psql "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;")
+
+    if [ -z "$tables" ]; then
+        log "${label} snapshot: no tables found in database."
+        echo "0"
+        return
+    fi
+
+    log "${label} snapshot:"
+    while IFS= read -r tbl; do
+        [ -z "$tbl" ] && continue
+        local cnt
+        cnt=$(run_psql "SELECT COUNT(*) FROM \"${tbl}\";")
+        cnt=${cnt:-0}
+        log "  ${tbl}: ${cnt} rows"
+        total=$((total + cnt))
+    done <<< "$tables"
+    log "  TOTAL: ${total} rows"
+
+    echo "$total"
+}
+
+# ─── Check if DB has actual data (rows) ──────────────────
+db_has_data() {
+    local total
+    total=$(snapshot_row_counts "Check")
+    [ "$total" -gt 0 ]
 }
 
 # ─── Restore from latest backup ──────────────────────────
@@ -50,8 +86,15 @@ restore_latest_backup() {
         log "Restoring from: $(basename "$latest")"
         gunzip -c "$latest" | PGPASSWORD="$POSTGRES_PASSWORD" psql \
             -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" \
-            --single-transaction -q
-        log "Restore complete."
+            --single-transaction -q 2>&1 | while IFS= read -r line; do
+                # Filter out noise, log only errors/warnings
+                case "$line" in
+                    ERROR*|WARNING*|FATAL*) log "  psql: $line" ;;
+                esac
+            done
+
+        log "Restore complete. Verifying data..."
+        snapshot_row_counts "Post-restore" > /dev/null
         return 0
     else
         log "No backup files found in ${BACKUP_DIR}."
@@ -59,8 +102,37 @@ restore_latest_backup() {
     fi
 }
 
+# ─── Save row count manifest alongside backup ────────────
+save_manifest() {
+    local backup_path="$1"
+    local manifest_path="${backup_path%.sql.gz}.manifest"
+
+    {
+        echo "backup_file=$(basename "$backup_path")"
+        echo "timestamp=$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+
+        local tables
+        tables=$(run_psql "SELECT tablename FROM pg_tables WHERE schemaname = 'public' ORDER BY tablename;")
+        local total=0
+        while IFS= read -r tbl; do
+            [ -z "$tbl" ] && continue
+            local cnt
+            cnt=$(run_psql "SELECT COUNT(*) FROM \"${tbl}\";")
+            cnt=${cnt:-0}
+            echo "${tbl}=${cnt}"
+            total=$((total + cnt))
+        done <<< "$tables"
+        echo "total=${total}"
+    } > "$manifest_path"
+
+    log "Manifest saved: $(basename "$manifest_path")"
+}
+
 # ─── Run pg_dump ──────────────────────────────────────────
 run_backup() {
+    # Snapshot before backup
+    snapshot_row_counts "Pre-backup" > /dev/null
+
     local filename="divs_backup_$(date '+%Y%m%d_%H%M%S').sql.gz"
     local filepath="${BACKUP_DIR}/${filename}"
 
@@ -73,23 +145,27 @@ run_backup() {
     size=$(du -h "$filepath" | cut -f1)
     log "Backup complete: ${filename} (${size})"
 
+    # Save manifest with row counts
+    save_manifest "$filepath"
+
     prune_old_backups
 }
 
 # ─── Retention: max 10 files, max 7 days ──────────────────
 prune_old_backups() {
-    # Delete backups older than 7 days
+    # Delete backups older than 7 days (both .sql.gz and .manifest)
     local deleted_age=0
     while IFS= read -r f; do
         log "Pruning (>7 days): $(basename "$f")"
         rm -f "$f"
+        rm -f "${f%.sql.gz}.manifest"
         deleted_age=$((deleted_age + 1))
     done < <(find "${BACKUP_DIR}" -name "divs_backup_*.sql.gz" -mtime +7 2>/dev/null)
     [ "$deleted_age" -gt 0 ] && log "Pruned ${deleted_age} file(s) older than 7 days."
 
     # Cap at 10 files (delete oldest)
     local file_list
-    file_list=$(ls -t "${BACKUP_DIR}"/divs_backup_*.sql.gz 2>/dev/null)
+    file_list=$(ls -t "${BACKUP_DIR}"/divs_backup_*.sql.gz 2>/dev/null || true)
     local total
     total=$(echo "$file_list" | grep -c . || true)
 
@@ -99,6 +175,7 @@ prune_old_backups() {
         echo "$file_list" | tail -n "$to_delete" | while IFS= read -r f; do
             log "  Removing: $(basename "$f")"
             rm -f "$f"
+            rm -f "${f%.sql.gz}.manifest"
         done
     fi
 }
@@ -136,13 +213,16 @@ mkdir -p "$BACKUP_DIR"
 wait_for_postgres
 
 # ─── Startup restore check ────────────────────────────────
-if db_is_empty; then
-    log "Database is empty (no public tables)."
-    if ! restore_latest_backup; then
+# Check actual row counts, not just table existence
+if db_has_data; then
+    log "Database has data — skipping restore."
+else
+    log "Database has 0 rows across all tables."
+    if restore_latest_backup; then
+        log "Data restored successfully."
+    else
         log "No backups available. Postgres will use init.sql if this is a fresh volume."
     fi
-else
-    log "Database has existing tables — skipping restore."
 fi
 
 # ─── Daily backup loop (3:00 AM UTC) ─────────────────────
