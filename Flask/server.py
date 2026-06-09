@@ -281,7 +281,7 @@ def uplink():
         location = rx_info[0].get("location")
         
         if gateway_id and location and location.get("latitude") and location.get("longitude"):
-            # Attempt to update the gateway's location in the database
+            # Upsert the gateway: insert if new, update location + last_seen if existing
             lat = location.get("latitude")
             lon = location.get("longitude")
             alt = location.get("altitude", 0)
@@ -289,60 +289,57 @@ def uplink():
             try:
                 cursor, conn = connect_to_database()
                 if cursor and conn:
-                    # Update gateway location and last_seen timestamp
                     cursor.execute(
                         """
-                        UPDATE gateways 
-                        SET latitude=%s, longitude=%s, altitude=%s, last_seen=NOW()
-                        WHERE gateway_id=%s
+                        INSERT INTO gateways (gateway_id, name, latitude, longitude, altitude, range, last_seen)
+                        VALUES (%s, %s, %s, %s, %s, %s, NOW())
+                        ON CONFLICT (gateway_id) DO UPDATE
+                        SET latitude=EXCLUDED.latitude, longitude=EXCLUDED.longitude,
+                            altitude=EXCLUDED.altitude, last_seen=NOW()
                         RETURNING last_seen
                         """,
-                        (lat, lon, alt, gateway_id)
+                        (gateway_id, gateway_id, lat, lon, alt, 5000)
                     )
                     
-                    if cursor.rowcount > 0:
-                        gw_last_seen_row = cursor.fetchone()
-                        gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
-                        update_node_connections(cursor)
-                        conn.commit()
-                        log.info(f"Auto-relocated gateway {gateway_id} to {lat}, {lon}")
-                        
-                        # Emit gateway_seen event so the frontend can update in real-time
-                        socketio.emit('gateway_seen', {
-                            'gateway_id': gateway_id,
-                            'last_seen': gw_last_seen
-                        })
-                    else:
-                        # Gateway exists in rxInfo but not in our DB — still update last_seen if it exists
-                        conn.rollback()
+                    gw_last_seen_row = cursor.fetchone()
+                    gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
+                    update_node_connections(cursor)
+                    conn.commit()
+                    log.info(f"Upserted gateway {gateway_id} at {lat}, {lon}")
+                    
+                    # Emit gateway_seen event so the frontend can update in real-time
+                    socketio.emit('gateway_seen', {
+                        'gateway_id': gateway_id,
+                        'last_seen': gw_last_seen
+                    })
                     close_db_connection(cursor, conn)
             except Exception as e:
-                log.error(f"Failed to auto-update gateway location: {e}")
+                log.error(f"Failed to upsert gateway location: {e}")
         elif gateway_id:
-            # Gateway is in rxInfo but without location — still update last_seen
+            # Gateway is in rxInfo but without location — upsert with last_seen only
             try:
                 cursor2, conn2 = connect_to_database()
                 if cursor2 and conn2:
                     cursor2.execute(
                         """
-                        UPDATE gateways 
+                        INSERT INTO gateways (gateway_id, name, latitude, longitude, altitude, range, last_seen)
+                        VALUES (%s, %s, 0, 0, 0, 5000, NOW())
+                        ON CONFLICT (gateway_id) DO UPDATE
                         SET last_seen=NOW()
-                        WHERE gateway_id=%s
                         RETURNING last_seen
                         """,
-                        (gateway_id,)
+                        (gateway_id, gateway_id)
                     )
-                    if cursor2.rowcount > 0:
-                        gw_last_seen_row = cursor2.fetchone()
-                        gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
-                        conn2.commit()
-                        socketio.emit('gateway_seen', {
-                            'gateway_id': gateway_id,
-                            'last_seen': gw_last_seen
-                        })
+                    gw_last_seen_row = cursor2.fetchone()
+                    gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
+                    conn2.commit()
+                    socketio.emit('gateway_seen', {
+                        'gateway_id': gateway_id,
+                        'last_seen': gw_last_seen
+                    })
                     close_db_connection(cursor2, conn2)
             except Exception as e:
-                log.error(f"Failed to update gateway last_seen: {e}")
+                log.error(f"Failed to upsert gateway last_seen: {e}")
 
     # Prepare batch data
     insert_values = []
@@ -535,6 +532,9 @@ def create_gateway():
             """
             INSERT INTO gateways (gateway_id, name, latitude, longitude, altitude, range)
             VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (gateway_id) DO UPDATE
+            SET name=EXCLUDED.name, latitude=EXCLUDED.latitude, longitude=EXCLUDED.longitude,
+                altitude=EXCLUDED.altitude, range=EXCLUDED.range
             """,
             (gateway_id, name, latitude, longitude, altitude, gateway_range)
         )

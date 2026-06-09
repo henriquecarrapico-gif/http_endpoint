@@ -2248,6 +2248,22 @@
                 gw.last_seen = data.last_seen || new Date().toISOString();
                 drawGateway(gw);
                 renderSidebar();
+            } else {
+                // New gateway auto-registered via uplink — fetch its full data
+                fetch('/gateways')
+                    .then(r => r.json())
+                    .then(gws => {
+                        if (!Array.isArray(gws)) return;
+                        gws.forEach(serverGw => {
+                            if (!gatewaysData.find(g => g.gateway_id === serverGw.gateway_id)) {
+                                gatewaysData.push(serverGw);
+                                drawGateway(serverGw);
+                            }
+                        });
+                        renderSidebar();
+                        drawConnections();
+                    })
+                    .catch(err => console.error("Error fetching new gateway:", err));
             }
         });
 
@@ -2871,7 +2887,7 @@
             if (!isEdit) {
                 const btnNode = document.getElementById('mf-btn-node');
                 const btnGW = document.getElementById('mf-btn-gateway');
-                const rangeInput = document.getElementById('mf-range');
+                const rangeInput = document.getElementById('mf-item-range');
                 btnNode.addEventListener('click', () => {
                     btnNode.classList.add('active'); btnGW.classList.remove('active');
                     currentFormType = 'node';
