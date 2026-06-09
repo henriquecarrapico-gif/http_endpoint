@@ -1146,6 +1146,9 @@
             selectedAcData = ac;
             const panel = document.getElementById('adsb-detail-panel');
 
+            // Close device panel if open
+            hideDevicePanel();
+
             // Update all data fields
             updateDetailPanelData(ac);
 
