@@ -693,6 +693,104 @@
             margin-right: 10px;
             white-space: nowrap;
         }
+
+        /* ─── Device Detail Panel (mirrors ADS-B panel) ─── */
+        #device-detail-panel {
+            position: absolute;
+            top: 0;
+            left: -320px;
+            width: 300px;
+            height: 100vh;
+            background: rgba(15, 20, 35, 0.94);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            z-index: 1001;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+            border-right: 1px solid rgba(255, 255, 255, 0.06);
+            overflow-y: auto;
+            overflow-x: hidden;
+            font-size: 12px;
+            color: #c8d6e5;
+        }
+
+        #device-detail-panel.open {
+            left: 0;
+        }
+
+        .ddp-actions {
+            padding: 10px 14px;
+            display: flex;
+            gap: 8px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .ddp-btn {
+            flex: 1;
+            padding: 8px 0;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .ddp-btn:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #cbd5e1;
+        }
+
+        .ddp-btn-save {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border-color: transparent;
+            color: white;
+        }
+
+        .ddp-btn-save:hover {
+            opacity: 0.9;
+            color: white;
+        }
+
+        .ddp-btn-delete {
+            border-color: rgba(239, 68, 68, 0.3);
+            color: #f87171;
+        }
+
+        .ddp-btn-delete:hover {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .ddp-edit-input {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 4px;
+            color: #e2e8f0;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            padding: 3px 6px;
+            outline: none;
+            width: 100px;
+            transition: border-color 0.15s;
+        }
+
+        .ddp-edit-input:focus {
+            border-color: rgba(59, 130, 246, 0.7);
+        }
+
+        .ddp-edit-input[type="number"] {
+            width: 70px;
+        }
     </style>
 </head>
 
@@ -761,7 +859,25 @@
             </div>
         </div>
 
+        <!-- Device Detail Panel (Node/Gateway) -->
+        <div id="device-detail-panel">
+            <div class="adp-header">
+                <div class="adp-close" id="ddp-close-btn">✕</div>
+                <div class="adp-callsign" id="ddp-name">—</div>
+                <div class="adp-subtitle" id="ddp-subtitle">—</div>
+            </div>
 
+            <div class="adp-section-title">Identification</div>
+            <div class="adp-section" id="ddp-id-section"></div>
+
+            <div class="adp-section-title">Location</div>
+            <div class="adp-section" id="ddp-location-section"></div>
+
+            <div class="adp-section-title">Status</div>
+            <div class="adp-section" id="ddp-status-section"></div>
+
+            <div class="ddp-actions" id="ddp-actions"></div>
+        </div>
 
         <div id="sidebar">
             <div class="sidebar-header">
@@ -2350,7 +2466,11 @@
             const marker = L.marker([node.latitude, node.longitude], {
                 icon: nodeIcon,
                 draggable: true
-            }).addTo(map).bindPopup(`<b>Node Name:</b> ${node.name || 'Unnamed'}<br><b>Device EUI:</b> ${node.dev_eui}<br><b>Altitude:</b> ${node.altitude || 0}m<br><b>Range:</b> ${node.range}m<br><b>Health:</b> ${healthLabel}<br><b>Last Check:</b> ${lastCheck}`);
+            }).addTo(map);
+
+            marker.on('click', function () {
+                showDevicePanel('node', node);
+            });
 
             let tooltip = null;
             if (node.name) {
@@ -2459,7 +2579,11 @@
             const marker = L.marker([gw.latitude, gw.longitude], {
                 icon: gwIcon,
                 draggable: true
-            }).addTo(map).bindPopup(`<b>Gateway Name:</b> ${gw.name || 'Unnamed'}<br><b>Gateway ID:</b> ${gw.gateway_id}<br><b>Altitude:</b> ${gw.altitude || 0}m<br><b>Range:</b> ${gw.range}m<br><b>Status:</b> ${gwHealthLabel}<br><b>Last Seen:</b> ${lastSeen}`);
+            }).addTo(map);
+
+            marker.on('click', function () {
+                showDevicePanel('gateway', gw);
+            });
 
             let tooltip = null;
             if (gw.name) {
@@ -2563,8 +2687,6 @@
                 <div class="node-actions">
                     <button class="action-btn" onclick="centerOnItem('gateway', '${gw.gateway_id}')" title="Center on Map">📍 Center</button>
                     <button class="action-btn" onclick="toggleVisibility('gateway', '${gw.gateway_id}')" title="Toggle Visibility">${isHidden ? '👁️ Show' : '🙈 Hide'}</button>
-                    <button class="action-btn" onclick="editItem('gateway', '${gw.gateway_id}')" title="Edit Gateway">✏️ Edit</button>
-                    <button class="action-btn" onclick="deleteItem('gateway', '${gw.gateway_id}')" style="color: darkred;" title="Delete Gateway">🗑️ Delete</button>
                 </div>
             `;
                 listDiv.appendChild(item);
@@ -2589,8 +2711,6 @@
                 <div class="node-actions">
                     <button class="action-btn" onclick="centerOnItem('node', '${node.dev_eui}')" title="Center on Map">📍 Center</button>
                     <button class="action-btn" onclick="toggleVisibility('node', '${node.dev_eui}')" title="Toggle Visibility">${isHidden ? '👁️ Show' : '🙈 Hide'}</button>
-                    <button class="action-btn" onclick="editItem('node', '${node.dev_eui}')" title="Edit Node">✏️ Edit</button>
-                    <button class="action-btn" onclick="deleteItem('node', '${node.dev_eui}')" style="color: darkred;" title="Delete Node">🗑️ Delete</button>
                 </div>
             `;
                 listDiv.appendChild(item);
@@ -2639,10 +2759,7 @@
             const item = type === 'node' ? nodesData.find(n => n.dev_eui === id) : gatewaysData.find(g => g.gateway_id === id);
             if (!item) return;
 
-            currentEditId = id;
-            currentEditType = type;
-
-            // Fit the map to the device's range circle smoothly
+            // Fly to the device and open the detail panel
             const objs = type === 'node' ? nodeObjects[id] : gatewayObjects[id];
             if (objs && objs.circle) {
                 map.flyToBounds(objs.circle.getBounds(), { padding: [50, 50], maxZoom: 16 });
@@ -2650,11 +2767,7 @@
                 map.flyTo([item.latitude, item.longitude], 15);
             }
 
-            // Open a popup to edit at its current location
-            // Delay the popup slightly so it opens during/after the fly animation starts
-            setTimeout(() => {
-                openFormPopup(item.latitude, item.longitude, item, type);
-            }, 300);
+            showDevicePanel(type, item);
         };
 
         window.deleteItem = function (type, id) {
@@ -2981,7 +3094,7 @@
         // Suppress default browser context menu on the map
         document.getElementById('map').addEventListener('contextmenu', e => e.preventDefault());
 
-        // Left-click on map: close context menu, deselect aircraft, clear track
+        // Left-click on map: close context menu, deselect aircraft, clear track, close device panel
         map.on('click', function () {
             removeContextMenu();
             if (currentEditId !== null) {
@@ -2994,6 +3107,8 @@
                 clearTrack();
                 selectedAircraftHex = null;
             }
+            // Close device detail panel
+            hideDevicePanel();
         });
 
         // Escape key: close detail panel, context menu, and form overlays
@@ -3005,6 +3120,8 @@
                     clearTrack();
                     selectedAircraftHex = null;
                 }
+                // Close device detail panel
+                hideDevicePanel();
                 // Also close any open form overlay
                 const overlay = document.querySelector('.modern-form-overlay');
                 if (overlay) overlay.remove();
@@ -3089,6 +3206,216 @@
         });
 
         map.addControl(new L.Control.SidebarToggle());
+
+        // ─── Device Detail Panel Logic ────────────────────────────────
+        let selectedDeviceData = null;
+        let selectedDeviceType = null; // 'node' or 'gateway'
+        let devicePanelEditMode = false;
+
+        // Close button
+        document.getElementById('ddp-close-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            hideDevicePanel();
+        });
+
+        function showDevicePanel(type, data) {
+            // Close ADS-B panel if open
+            if (selectedAcData) {
+                hideDetailPanel();
+                clearTrack();
+                selectedAircraftHex = null;
+            }
+
+            selectedDeviceType = type;
+            selectedDeviceData = data;
+            devicePanelEditMode = false;
+
+            renderDevicePanelView();
+            document.getElementById('device-detail-panel').classList.add('open');
+        }
+
+        function hideDevicePanel() {
+            document.getElementById('device-detail-panel').classList.remove('open');
+            selectedDeviceData = null;
+            selectedDeviceType = null;
+            devicePanelEditMode = false;
+        }
+
+        function renderDevicePanelView() {
+            if (!selectedDeviceData) return;
+
+            const data = selectedDeviceData;
+            const type = selectedDeviceType;
+            const isNode = type === 'node';
+            const id = isNode ? data.dev_eui : data.gateway_id;
+
+            // Header
+            document.getElementById('ddp-name').textContent = data.name || (isNode ? 'Unnamed Node' : 'Unnamed Gateway');
+            document.getElementById('ddp-subtitle').innerHTML = `<span style="color:${isNode ? '#a78bfa' : '#34d399'}">${isNode ? '📡 Node' : '🏗️ Gateway'}</span> · <span style="font-family:monospace;font-size:11px">${id}</span>`;
+
+            // ID section
+            const idSection = document.getElementById('ddp-id-section');
+            idSection.innerHTML = `
+                <div class="adp-row"><span class="adp-label">${isNode ? 'Device EUI' : 'Gateway ID'}</span><span class="adp-value" style="font-family:monospace;font-size:11px">${id}</span></div>
+                <div class="adp-row"><span class="adp-label">Name</span><span class="adp-value" id="ddp-name-val">${data.name || '—'}</span></div>
+            `;
+
+            // Location section
+            const locSection = document.getElementById('ddp-location-section');
+            locSection.innerHTML = `
+                <div class="adp-row"><span class="adp-label">Position</span><span class="adp-value">${(data.latitude || 0).toFixed(6)}, ${(data.longitude || 0).toFixed(6)}</span></div>
+                <div class="adp-row"><span class="adp-label">Altitude</span><span class="adp-value" id="ddp-alt-val">${data.altitude || 0} m</span></div>
+                <div class="adp-row"><span class="adp-label">Range</span><span class="adp-value" id="ddp-range-val">${data.range || 0} m</span></div>
+            `;
+
+            // Status section
+            const statusSection = document.getElementById('ddp-status-section');
+            if (isNode) {
+                const healthColor = getNodeHealthColor(data);
+                const healthLabel = getNodeHealthLabel(data);
+                const lastCheck = data.last_health_check ? new Date(data.last_health_check).toLocaleString() : 'Never';
+                const connGw = data.connected_gateway
+                    ? (gatewaysData.find(g => g.gateway_id === data.connected_gateway)?.name || data.connected_gateway.substring(0, 12) + '…')
+                    : 'None';
+                statusSection.innerHTML = `
+                    <div class="adp-row"><span class="adp-label">Health</span><span class="adp-value" style="color:${healthColor}">${healthLabel}</span></div>
+                    <div class="adp-row"><span class="adp-label">Last Check</span><span class="adp-value">${lastCheck}</span></div>
+                    <div class="adp-row"><span class="adp-label">Gateway</span><span class="adp-value">${connGw}</span></div>
+                `;
+            } else {
+                const gwColor = getGatewayHealthColor(data);
+                const gwLabel = getGatewayHealthLabel(data);
+                const lastSeen = data.last_seen ? new Date(data.last_seen).toLocaleString() : 'Never';
+                const connNodes = nodesData.filter(n => n.connected_gateway === data.gateway_id).length;
+                statusSection.innerHTML = `
+                    <div class="adp-row"><span class="adp-label">Status</span><span class="adp-value" style="color:${gwColor}">${gwLabel}</span></div>
+                    <div class="adp-row"><span class="adp-label">Last Seen</span><span class="adp-value">${lastSeen}</span></div>
+                    <div class="adp-row"><span class="adp-label">Connected Nodes</span><span class="adp-value">${connNodes}</span></div>
+                `;
+            }
+
+            // Actions — view mode
+            const actionsDiv = document.getElementById('ddp-actions');
+            actionsDiv.innerHTML = `
+                <button class="ddp-btn" id="ddp-edit-btn">✏️ Edit</button>
+                <button class="ddp-btn ddp-btn-delete" id="ddp-delete-btn">🗑️ Delete</button>
+            `;
+            document.getElementById('ddp-edit-btn').addEventListener('click', enterDeviceEditMode);
+            document.getElementById('ddp-delete-btn').addEventListener('click', deleteDeviceFromPanel);
+        }
+
+        function enterDeviceEditMode() {
+            if (!selectedDeviceData) return;
+            devicePanelEditMode = true;
+
+            const data = selectedDeviceData;
+            const type = selectedDeviceType;
+            const isNode = type === 'node';
+            const id = isNode ? data.dev_eui : data.gateway_id;
+
+            // ID section — name becomes editable
+            const idSection = document.getElementById('ddp-id-section');
+            idSection.innerHTML = `
+                <div class="adp-row"><span class="adp-label">${isNode ? 'Device EUI' : 'Gateway ID'}</span><span class="adp-value" style="font-family:monospace;font-size:11px">${id}</span></div>
+                <div class="adp-row"><span class="adp-label">Name</span><span class="adp-value"><input class="ddp-edit-input" id="ddp-edit-name" value="${data.name || ''}" placeholder="Enter name" style="width:130px"></span></div>
+            `;
+
+            // Location section — altitude and range become editable
+            const locSection = document.getElementById('ddp-location-section');
+            locSection.innerHTML = `
+                <div class="adp-row"><span class="adp-label">Position</span><span class="adp-value">${(data.latitude || 0).toFixed(6)}, ${(data.longitude || 0).toFixed(6)}</span></div>
+                <div class="adp-row"><span class="adp-label">Altitude</span><span class="adp-value"><input class="ddp-edit-input" id="ddp-edit-alt" type="number" value="${data.altitude || 0}"> m</span></div>
+                <div class="adp-row"><span class="adp-label">Range</span><span class="adp-value"><input class="ddp-edit-input" id="ddp-edit-range" type="number" value="${data.range || 0}"> m</span></div>
+            `;
+
+            // Actions — edit mode
+            const actionsDiv = document.getElementById('ddp-actions');
+            actionsDiv.innerHTML = `
+                <button class="ddp-btn ddp-btn-save" id="ddp-save-btn">💾 Save</button>
+                <button class="ddp-btn" id="ddp-cancel-btn">Cancel</button>
+            `;
+            document.getElementById('ddp-save-btn').addEventListener('click', saveDeviceChanges);
+            document.getElementById('ddp-cancel-btn').addEventListener('click', cancelDeviceEdit);
+
+            // Focus the name field
+            setTimeout(() => document.getElementById('ddp-edit-name')?.focus(), 50);
+        }
+
+        function cancelDeviceEdit() {
+            devicePanelEditMode = false;
+            renderDevicePanelView();
+        }
+
+        function saveDeviceChanges() {
+            if (!selectedDeviceData || !selectedDeviceType) return;
+
+            const type = selectedDeviceType;
+            const data = selectedDeviceData;
+            const isNode = type === 'node';
+            const id = isNode ? data.dev_eui : data.gateway_id;
+
+            const name = document.getElementById('ddp-edit-name').value;
+            const altitude = parseFloat(document.getElementById('ddp-edit-alt').value) || 0;
+            const range = document.getElementById('ddp-edit-range').value;
+
+            if (!range) {
+                alert('Range is required!');
+                return;
+            }
+
+            const payload = {
+                name: name,
+                latitude: data.latitude,
+                longitude: data.longitude,
+                altitude: altitude,
+                range: range
+            };
+
+            const endpoint = isNode ? `/nodes/${id}` : `/gateways/${id}`;
+
+            fetch(endpoint, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(r => r.json())
+            .then(result => {
+                if (result.status === 'ok') {
+                    // Update local data
+                    data.name = name;
+                    data.altitude = altitude;
+                    data.range = range;
+
+                    // Redraw on map
+                    if (isNode) drawNode(data);
+                    else drawGateway(data);
+
+                    refreshConnections();
+                    renderSidebar();
+
+                    // Switch back to view mode with updated data
+                    devicePanelEditMode = false;
+                    renderDevicePanelView();
+                } else {
+                    alert('Failed to update: ' + result.message);
+                }
+            })
+            .catch(err => {
+                console.error('Error saving device:', err);
+                alert('An error occurred. Check the console.');
+            });
+        }
+
+        function deleteDeviceFromPanel() {
+            if (!selectedDeviceData || !selectedDeviceType) return;
+
+            const type = selectedDeviceType;
+            const isNode = type === 'node';
+            const id = isNode ? selectedDeviceData.dev_eui : selectedDeviceData.gateway_id;
+
+            hideDevicePanel();
+            window.deleteItem(type, id);
+        }
 
     </script>
 </body>
