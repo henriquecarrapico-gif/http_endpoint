@@ -1265,41 +1265,16 @@
             const reqBody = { planes: [{ callsign: callsign, lat: ac.lat, lon: ac.lon }] };
             console.log('[Route] Fetching route for', callsign, reqBody);
 
-            // Try adsb.lol first, fall back to adsb.im
-            const routeProviders = [
-                'https://api.adsb.lol/api/0/routeset',
-                'https://adsb.im/api/0/routeset'
-            ];
-
-            async function tryRouteProviders() {
-                for (const providerUrl of routeProviders) {
-                    try {
-                        const res = await fetch(providerUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(reqBody)
-                        });
-                        if (res.ok) {
-                            const data = await res.json();
-                            return data;
-                        }
-                    } catch (e) {
-                        console.warn(`[Route] ${providerUrl} failed:`, e.message);
-                    }
-                }
-                return null;
-            }
-
-            tryRouteProviders()
+            fetch('/api/adsb/routeset', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(reqBody)
+            })
+                .then(res => {
+                    console.log('[Route] Response status:', res.status);
+                    return res.json();
+                })
                 .then(data => {
-                    if (!data) {
-                        console.warn('[Route] All route providers failed');
-                        if (selectedAcData && selectedAcData.hex === ac.hex) {
-                            document.getElementById('adp-route-text').textContent = 'No route data';
-                            document.getElementById('adp-route-text').className = '';
-                        }
-                        return;
-                    }
                     console.log('[Route] Response data:', JSON.stringify(data).substring(0, 500));
                     if (!selectedAcData || selectedAcData.hex !== ac.hex) return; // stale
 
@@ -1329,7 +1304,15 @@
                         } else if (airports && airports.length === 1) {
                             routeStr = airports[0].icao || airports[0].iata || 'Unknown';
                         }
-                        // Format 2: route string
+                        // Format 2: from_iata / to_iata
+                        if (!routeStr && routeEntry.from_iata && routeEntry.to_iata) {
+                            routeStr = `<span class="adp-route-airports">${routeEntry.from_iata}<span class="adp-route-arrow"> → </span>${routeEntry.to_iata}</span>`;
+                            if (routeEntry.to_lat != null && routeEntry.to_lon != null) {
+                                destLat = routeEntry.to_lat;
+                                destLon = routeEntry.to_lon;
+                            }
+                        }
+                        // Format 3: route string
                         if (!routeStr && (routeEntry.route || routeEntry._route)) {
                             routeStr = `<span class="adp-route-airports">${routeEntry.route || routeEntry._route}</span>`;
                         }
@@ -1422,37 +1405,24 @@
                 lastSelectedPos = [lastPt.lat, lastPt.lon, lastPt.alt_baro];
             }
 
-            // Then: try to fetch extended history directly from globe.adsb.lol
-            const hexLower = icao24.toLowerCase();
-            const last2 = hexLower.slice(-2);
-            const traceUrl = `https://globe.adsb.lol/data/traces/${last2}/trace_full_${hexLower}.json`;
-
-            fetch(traceUrl)
+            // Then: try to fetch extended history from server (OpenSky/adsb.lol)
+            // This will prepend older points if available
+            fetch(`/api/adsb/track/${icao24}`)
                 .then(res => {
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     return res.json();
                 })
-                .then(traceData => {
-                    if (!traceData.trace || !Array.isArray(traceData.trace) || traceData.trace.length < 2) return;
-                    // Parse globe.adsb.lol trace format into path format
-                    const path = traceData.trace
-                        .filter(pt => pt.length >= 3 && pt[1] != null && pt[2] != null)
-                        .map(pt => {
-                            const alt_baro = pt.length > 3 ? pt[3] : null;
-                            const track_deg = pt.length > 5 ? pt[5] : null;
-                            const alt_m = (typeof alt_baro === 'number') ? alt_baro * 0.3048 : null;
-                            return [pt[0], pt[1], pt[2], alt_m, track_deg, alt_baro === 'ground'];
-                        });
-                    if (path.length < 2) return;
-                    console.log(`[Track] Got ${path.length} points from globe.adsb.lol, redrawing with full history`);
+                .then(data => {
+                    if (!data.path || !Array.isArray(data.path) || data.path.length < 2) return;
+                    console.log(`[Track] Got ${data.path.length} points from server, redrawing with full history`);
                     // Clear local-only trail and redraw with full server history
                     trackSegments.forEach(seg => adsbLayerGroup.removeLayer(seg));
                     trackSegments = [];
-                    drawTraceSegments(path, false);
+                    drawTraceSegments(data.path, false);
                 })
                 .catch(err => {
-                    // Fetch failed — local history trail is already drawn, that's fine
-                    console.log(`[Track] globe.adsb.lol fetch failed (${err.message}), using local history only`);
+                    // Server fetch failed — local history trail is already drawn, that's fine
+                    console.log(`[Track] Server fetch failed (${err.message}), using local history only`);
                 });
         }
 
@@ -1604,7 +1574,7 @@
             if (!map.hasLayer(adsbLayerGroup)) return;
 
             const center = map.getCenter();
-            const url = `https://api.adsb.lol/v2/lat/${center.lat.toFixed(4)}/lon/${center.lng.toFixed(4)}/dist/${ADSB_RADIUS_NM}`;
+            const url = `/api/adsb?lat=${center.lat.toFixed(4)}&lon=${center.lng.toFixed(4)}&dist=${ADSB_RADIUS_NM}`;
 
             fetch(url)
                 .then(res => res.json())
