@@ -9,30 +9,49 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - divs-net
+
+  db-backup:
+    image: postgres:15
+    container_name: DIVS-db-backup
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./backups:/backups
+      - ./db-backup.sh:/db-backup.sh:ro
+      - ./init.sql:/init.sql:ro
+    entrypoint: ["bash", "/db-backup.sh"]
+    stop_grace_period: 30s
+    networks:
+      - divs-net
 
   flask-server:
     build: ./Flask
     container_name: DIVS-flask
     restart: always
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file: .env
     volumes:
       - ./Flask:/app # Mount source code for live container reload
       - /app/templates # Template rendering fallback protection
       - ./support:/support
-
-  nginx:
-    image: nginx:latest
-    container_name: DIVS-nginx
-    restart: always
-    ports:
-      - "80:80"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./Flask/templates:/usr/share/nginx/html/templates:ro # Direct templates volume mount
-    depends_on:
-      - flask-server
+    networks:
+      - divs-net
 
 volumes:
   postgres_data:
+
+networks:
+  divs-net:
+    external: true

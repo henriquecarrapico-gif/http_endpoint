@@ -7,9 +7,13 @@ import json
 from psycopg2.extras import execute_values
 import os
 from database import connect_to_database, close_db_connection
+from logger import GatewayLogger
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Structured logger (file + console), same pattern as tower_mic
+log = GatewayLogger(log_dir='logs', log_file_name='gateway.log', level='DEBUG', console=True)
 
 import csv
 
@@ -36,11 +40,11 @@ try:
                         }
                     except ValueError:
                         continue
-        app.logger.info(f"Loaded {len(sound_classes)} sound classes from CSV")
+        log.info(f"Loaded {len(sound_classes)} sound classes from CSV")
     else:
-        app.logger.warning(f"Sound classes file not found at: {class_groups_path}")
+        log.warning(f"Sound classes file not found at: {class_groups_path}")
 except Exception as e:
-    app.logger.error(f"Error loading sound classes from CSV: {e}")
+    log.error(f"Error loading sound classes from CSV: {e}")
 
 # Mic-check health class IDs (must match node firmware)
 HEALTH_OK_CLASS_ID = 1022
@@ -119,7 +123,7 @@ def get_nodes():
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"Error fetching nodes: {e}")
+        log.error(f"Error fetching nodes: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -156,7 +160,7 @@ def create_node():
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"DB insert failed, rolled back: {e}")
+        log.error(f"DB insert failed, rolled back: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -199,7 +203,7 @@ def update_node(dev_eui):
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"DB update failed, rolled back: {e}")
+        log.error(f"DB update failed, rolled back: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -225,7 +229,7 @@ def delete_node(dev_eui):
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"DB delete failed, rolled back: {e}")
+        log.error(f"DB delete failed, rolled back: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -244,7 +248,7 @@ def uplink():
     try:
         data = request.get_json()
     except Exception as e:
-        app.logger.error(f"Failed to parse JSON: {e}")
+        log.error(f"Failed to parse JSON: {e}")
         return jsonify({"status": "error", "message": "Invalid JSON"}), 400
 
     # LoRaWAN metadata
@@ -262,7 +266,7 @@ def uplink():
         detections = decoded.get("detections", [])
 
     if not detections:
-        app.logger.warning(f"No detections found in uplink or payload could not be decoded. Object: {decoded}")
+        log.warning(f"No detections found in uplink or payload could not be decoded. Object: {decoded}")
         return jsonify({"status": "ok", "message": "No detections to process"}), 200
 
     # Gateway radio stats (first gateway wins)
@@ -301,7 +305,7 @@ def uplink():
                         gw_last_seen = gw_last_seen_row[0].isoformat() if gw_last_seen_row else None
                         update_node_connections(cursor)
                         conn.commit()
-                        app.logger.info(f"Auto-relocated gateway {gateway_id} to {lat}, {lon}")
+                        log.info(f"Auto-relocated gateway {gateway_id} to {lat}, {lon}")
                         
                         # Emit gateway_seen event so the frontend can update in real-time
                         socketio.emit('gateway_seen', {
@@ -313,7 +317,7 @@ def uplink():
                         conn.rollback()
                     close_db_connection(cursor, conn)
             except Exception as e:
-                app.logger.error(f"Failed to auto-update gateway location: {e}")
+                log.error(f"Failed to auto-update gateway location: {e}")
         elif gateway_id:
             # Gateway is in rxInfo but without location — still update last_seen
             try:
@@ -338,7 +342,7 @@ def uplink():
                         })
                     close_db_connection(cursor2, conn2)
             except Exception as e:
-                app.logger.error(f"Failed to update gateway last_seen: {e}")
+                log.error(f"Failed to update gateway last_seen: {e}")
 
     # Prepare batch data
     insert_values = []
@@ -362,7 +366,7 @@ def uplink():
         insert_values.append((dev_eui, timestamp, class_id, azimuth, node_time, rssi, snr))
 
     if not insert_values:
-        app.logger.warning("No valid detections with azimuth found in uplink.")
+        log.warning("No valid detections with azimuth found in uplink.")
         return jsonify({"status": "ok", "message": "No valid detections to process"}), 200
 
     cursor, conn = None, None
@@ -421,12 +425,12 @@ def uplink():
     except psycopg2.Error as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"Database error during bulk insert: {e.pgerror or e}")
+        log.error(f"Database error during bulk insert: {e.pgerror or e}")
         return jsonify({"status": "error", "message": "Database communication error"}), 500
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"Unexpected error during bulk insert: {e}")
+        log.error(f"Unexpected error during bulk insert: {e}")
         return jsonify({"status": "error", "message": "Unexpected server error"}), 500
     finally:
         if cursor and conn:
@@ -462,7 +466,7 @@ def get_recent_detections():
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"Error fetching recent detections: {e}")
+        log.error(f"Error fetching recent detections: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -502,7 +506,7 @@ def get_gateways():
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"Error fetching gateways: {e}")
+        log.error(f"Error fetching gateways: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -539,7 +543,7 @@ def create_gateway():
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"DB insert failed, rolled back: {e}")
+        log.error(f"DB insert failed, rolled back: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -582,7 +586,7 @@ def update_gateway(gateway_id):
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"DB update failed, rolled back: {e}")
+        log.error(f"DB update failed, rolled back: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -608,7 +612,7 @@ def delete_gateway(gateway_id):
     except Exception as e:
         if conn:
             conn.rollback()
-        app.logger.error(f"DB delete failed, rolled back: {e}")
+        log.error(f"DB delete failed, rolled back: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         if cursor and conn:
@@ -642,10 +646,10 @@ def adsb_proxy():
             data = json.loads(resp.read().decode())
         return jsonify(data), 200
     except URLError as e:
-        app.logger.error(f"ADS-B API fetch failed: {e}")
+        log.error(f"ADS-B API fetch failed: {e}")
         return jsonify({"status": "error", "message": "Failed to fetch ADS-B data"}), 502
     except Exception as e:
-        app.logger.error(f"ADS-B proxy error: {e}")
+        log.error(f"ADS-B proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route("/api/adsb/track/<icao24>", methods=["GET"])
@@ -682,32 +686,32 @@ def adsb_track_proxy(icao24):
     last2 = hex_lower[-2:]
     trace_url = f"https://globe.adsb.lol/data/traces/{last2}/trace_full_{hex_lower}.json"
     try:
-        app.logger.info(f"track: trying globe trace for {hex_lower}")
+        log.info(f"track: trying globe trace for {hex_lower}")
         req = Request(trace_url, headers={"User-Agent": ua, "Accept": "application/json"})
         with urlopen(req, timeout=15, context=ctx) as resp:
             raw = resp.read().decode()
-            app.logger.info(f"track: globe returned {len(raw)} bytes (status {resp.getcode()})")
+            log.info(f"track: globe returned {len(raw)} bytes (status {resp.getcode()})")
             if raw.strip():
                 trace_data = json.loads(raw)
                 if "trace" in trace_data and len(trace_data["trace"]) >= 2:
                     path = parse_globe_trace(trace_data["trace"])
                     if len(path) >= 2:
-                        app.logger.info(f"track: globe returned {len(path)} points for {hex_lower}")
+                        log.info(f"track: globe returned {len(path)} points for {hex_lower}")
                         return jsonify({"icao24": hex_lower, "path": path}), 200
     except Exception as e:
-        app.logger.warning(f"track: globe failed for {hex_lower}: {type(e).__name__}: {e}")
+        log.warning(f"track: globe failed for {hex_lower}: {type(e).__name__}: {e}")
 
     # Try 2: OpenSky Network
     try:
         url = f"https://opensky-network.org/api/tracks/all?icao24={hex_lower}&time=0"
-        app.logger.info(f"track: trying OpenSky for {hex_lower}")
+        log.info(f"track: trying OpenSky for {hex_lower}")
         req = Request(url, headers={"User-Agent": ua})
         with urlopen(req, timeout=15, context=ctx) as resp:
             data = json.loads(resp.read().decode())
-        app.logger.info(f"track: OpenSky returned {len(data.get('path', []))} points")
+        log.info(f"track: OpenSky returned {len(data.get('path', []))} points")
         return jsonify(data), 200
     except Exception as e:
-        app.logger.warning(f"track: OpenSky failed for {hex_lower}: {type(e).__name__}: {e}")
+        log.warning(f"track: OpenSky failed for {hex_lower}: {type(e).__name__}: {e}")
 
     return jsonify({"status": "error", "message": "No trail data available"}), 502
 
@@ -717,7 +721,7 @@ def adsb_routeset_proxy():
     Tries adsb.lol first, falls back to adsb.im."""
     try:
         body = request.get_json(force=True)
-        app.logger.info(f"routeset request body: {json.dumps(body)}")
+        log.info(f"routeset request body: {json.dumps(body)}")
         encoded = json.dumps(body).encode("utf-8")
 
         # Try multiple routeset API providers
@@ -738,23 +742,23 @@ def adsb_routeset_proxy():
                 with urlopen(req, timeout=10) as resp:
                     status = resp.getcode()
                     raw = resp.read().decode()
-                    app.logger.info(f"routeset [{api_url}] status={status}, body(500)={raw[:500]}")
+                    log.info(f"routeset [{api_url}] status={status}, body(500)={raw[:500]}")
 
                     if not raw or not raw.strip():
-                        app.logger.warning(f"routeset [{api_url}] returned empty body")
+                        log.warning(f"routeset [{api_url}] returned empty body")
                         last_error = "Empty response"
                         continue
 
                     data = json.loads(raw)
                     return jsonify(data), 200
             except Exception as e:
-                app.logger.warning(f"routeset [{api_url}] failed: {e}")
+                log.warning(f"routeset [{api_url}] failed: {e}")
                 last_error = str(e)
                 continue
 
         return jsonify({"status": "error", "message": f"All routeset providers failed: {last_error}"}), 502
     except Exception as e:
-        app.logger.error(f"routeset proxy error: {e}")
+        log.error(f"routeset proxy error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+services:
+  nginx:
+    image: nginx:latest
+    container_name: DIVS-nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./Flask/templates:/usr/share/nginx/html/templates:ro
+    networks:
+      - divs-net
+
+networks:
+  divs-net:
+    name: divs-net
+    driver: bridge

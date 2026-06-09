@@ -7,3 +7,10 @@ __pycache__/
 *.pyd
 
 *.old*
+
+# Runtime logs
+logs/
+*.log
+
+# Database backups
+#backups/
