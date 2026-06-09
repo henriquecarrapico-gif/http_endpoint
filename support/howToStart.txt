@@ -1,0 +1,8 @@
+Start nginx (creates the network)
+
+docker compose -f docker-compose.nginx.yml up -d
+
+
+Then start the project (joins the existing network)
+
+docker compose up -d
