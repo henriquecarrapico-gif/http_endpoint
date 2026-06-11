@@ -10,6 +10,20 @@ services:
       - ./Flask/templates:/usr/share/nginx/html/templates:ro
     networks:
       - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+          pids: 100
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "25m"
+        max-file: "5"
 
 networks:
   divs-net:

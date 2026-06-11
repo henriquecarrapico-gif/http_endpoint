@@ -16,6 +16,20 @@ services:
       retries: 10
     networks:
       - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+          pids: 200
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
 
   db-backup:
     image: postgres:15
@@ -33,6 +47,20 @@ services:
     stop_grace_period: 30s
     networks:
       - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+          pids: 50
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   flask-server:
     build: ./Flask
@@ -48,6 +76,20 @@ services:
       - ./support:/support
     networks:
       - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 512M
+          pids: 100
+        reservations:
+          cpus: "0.15"
+          memory: 128M
+    logging:
+      driver: json-file
+      options:
+        max-size: "25m"
+        max-file: "5"
 
 volumes:
   postgres_data:
