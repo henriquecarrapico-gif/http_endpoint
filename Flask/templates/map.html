@@ -663,14 +663,14 @@
             height: 10px;
             border-radius: 5px;
             background: linear-gradient(to right,
-                #4ade80 0%,
-                #a3e635 12%,
-                #facc15 25%,
-                #fb923c 42%,
-                #f87171 58%,
-                #e879f9 75%,
-                #a78bfa 88%,
-                #60a5fa 100%);
+                    #4ade80 0%,
+                    #a3e635 12%,
+                    #facc15 25%,
+                    #fb923c 42%,
+                    #f87171 58%,
+                    #e879f9 75%,
+                    #a78bfa 88%,
+                    #60a5fa 100%);
         }
 
         .alt-legend-labels {
@@ -942,21 +942,21 @@
             </div>
         </div>
 
-    <!-- Altitude Legend -->
-    <div class="altitude-legend" id="altitude-legend">
-        <span class="alt-legend-title">ALT</span>
-        <div>
-            <div class="alt-legend-bar"></div>
-            <div class="alt-legend-labels">
-                <span>GND</span>
-                <span>5k</span>
-                <span>15k</span>
-                <span>25k</span>
-                <span>35k</span>
-                <span>45k+</span>
+        <!-- Altitude Legend -->
+        <div class="altitude-legend" id="altitude-legend">
+            <span class="alt-legend-title">ALT</span>
+            <div>
+                <div class="alt-legend-bar"></div>
+                <div class="alt-legend-labels">
+                    <span>GND</span>
+                    <span>5k</span>
+                    <span>15k</span>
+                    <span>25k</span>
+                    <span>35k</span>
+                    <span>45k+</span>
+                </div>
             </div>
         </div>
-    </div>
     </div>
 
 
@@ -970,6 +970,46 @@
     <!-- tar1090-style embedded aircraft shapes -->
     <script src="/static/aircraft_shapes.js"></script>
     <script>
+        // ─── URL Query Parameter Parsing ──────────────────────────
+        // Supported params:
+        //   lat, lon  — center coordinates (decimal degrees)
+        //   zoom      — distance in km from center to the side edge of the viewport
+        //   map       — base layer: street | satellite | topo | dark
+        //   adsb      — ADS-B overlay: on | off
+        const _urlParams = new URLSearchParams(window.location.search);
+
+        const _paramLat = _urlParams.has('lat') ? parseFloat(_urlParams.get('lat')) : null;
+        const _paramLon = _urlParams.has('lon') ? parseFloat(_urlParams.get('lon')) : null;
+        const _paramZoomKm = _urlParams.has('zoom') ? parseFloat(_urlParams.get('zoom')) : null;
+        const _paramMap = _urlParams.get('map');   // string or null
+        const _paramAdsb = _urlParams.get('adsb');  // string or null
+
+        // Convert km (center→side edge) to a Leaflet zoom level.
+        // At zoom z, the horizontal span at the equator ≈ 40075 / 2^z km,
+        // so half-span = 40075 / 2^(z+1). Adjusted for latitude via cos(lat).
+        function _kmToZoom(km, lat) {
+            if (!km || km <= 0) return null;
+            const latRad = (lat || 0) * Math.PI / 180;
+            // half-width of the map in km = earthCircumference * cos(lat) / 2^(z+1)
+            // Solve for z: z = log2( earthCircumference * cos(lat) / (2 * km) ) - 1
+            // But Leaflet zoom is roughly: 2^z = earthCircumference * cos(lat) / (km * 2 * tileCount)
+            // Simplified: z = log2(40075 * cos(lat) / (2 * km))
+            const z = Math.log2((40075 * Math.cos(latRad)) / (2 * km));
+            return Math.max(1, Math.min(Math.round(z * 100) / 100, 20));
+        }
+
+        // Reverse: Leaflet zoom level → km (center to side edge)
+        function _zoomToKm(zoom, lat) {
+            const latRad = (lat || 0) * Math.PI / 180;
+            return (40075 * Math.cos(latRad)) / (2 * Math.pow(2, zoom));
+        }
+
+        const _defaultLat = (_paramLat !== null && !isNaN(_paramLat)) ? _paramLat : 41.4;
+        const _defaultLon = (_paramLon !== null && !isNaN(_paramLon)) ? _paramLon : -7.8;
+        const _defaultZoom = (_paramZoomKm !== null && !isNaN(_paramZoomKm))
+            ? _kmToZoom(_paramZoomKm, _defaultLat)
+            : 8;
+
         // Initialize the map, centered on specific coordinates
         const worldBounds = [
             [-90, -180],
@@ -979,7 +1019,7 @@
         const map = L.map('map', {
             maxBounds: worldBounds,
             maxBoundsViscosity: 1.0 // Prevents dragging completely outside the bounds
-        }).setView([41.4, -7.8], 8);
+        }).setView([_defaultLat, _defaultLon], _defaultZoom);
 
         // Calculate and set the minimum zoom required to fit the bounds
         map.setMinZoom(map.getBoundsZoom(worldBounds, true));
@@ -1026,12 +1066,24 @@
             '⛰️ Topographic': topoLayer,
             '🌙 Dark': darkLayer
         };
-        const savedMapType = localStorage.getItem('divs_map_type') || '🗺️ Street';
+        // URL param map type mapping (short names → layer keys)
+        const _mapParamLookup = {
+            'street': '🗺️ Street',
+            'satellite': '🛰️ Satellite',
+            'topo': '⛰️ Topographic',
+            'dark': '🌙 Dark'
+        };
+        const _urlMapType = _paramMap ? _mapParamLookup[_paramMap.toLowerCase()] : null;
+        const savedMapType = _urlMapType || localStorage.getItem('divs_map_type') || '🗺️ Street';
         (baseMaps[savedMapType] || streetLayer).addTo(map);
 
         // ─── ADS-B aircraft overlay layer ─────────────────────────
         const adsbLayerGroup = L.layerGroup();
-        const adsbEnabled = localStorage.getItem('divs_adsb_enabled') !== 'false';
+        // URL param overrides localStorage for ADS-B toggle
+        const _urlAdsb = _paramAdsb ? _paramAdsb.toLowerCase() : null;
+        const adsbEnabled = _urlAdsb === 'on' ? true
+            : _urlAdsb === 'off' ? false
+                : localStorage.getItem('divs_adsb_enabled') !== 'false';
         if (adsbEnabled) adsbLayerGroup.addTo(map);
 
         const overlayMaps = {
@@ -1058,6 +1110,50 @@
                 localStorage.setItem('divs_adsb_enabled', 'false');
             }
         });
+
+        // ─── Share Link: live URL + copy button ───────────────────
+        // Reverse lookup: layer key → short param name
+        const _mapKeyToParam = {};
+        Object.entries(_mapParamLookup).forEach(([k, v]) => _mapKeyToParam[v] = k);
+
+        // Detect which base layer is currently active
+        function _activeBaseLayerName() {
+            for (const [name, layer] of Object.entries(baseMaps)) {
+                if (map.hasLayer(layer)) return name;
+            }
+            return '🗺️ Street';
+        }
+
+        // Build the shareable URL from current map state
+        function _buildShareUrl() {
+            const center = map.getCenter();
+            const zoom = map.getZoom();
+            const km = _zoomToKm(zoom, center.lat);
+            const layerName = _activeBaseLayerName();
+            const mapParam = _mapKeyToParam[layerName] || 'street';
+            const adsbOn = map.hasLayer(adsbLayerGroup);
+
+            const params = new URLSearchParams();
+            params.set('lat', center.lat.toFixed(4));
+            params.set('lon', center.lng.toFixed(4));
+            params.set('zoom', km.toFixed(1));
+            params.set('map', mapParam);
+            params.set('adsb', adsbOn ? 'on' : 'off');
+
+            return window.location.origin + window.location.pathname + '?' + params.toString();
+        }
+
+        // Update the browser address bar (no reload) so the URL always matches
+        function _updateUrlBar() {
+            const url = _buildShareUrl();
+            history.replaceState(null, '', url);
+        }
+
+        // Live-update the URL on map interactions
+        map.on('moveend', _updateUrlBar);
+        map.on('baselayerchange', function () { setTimeout(_updateUrlBar, 50); });
+        map.on('overlayadd', _updateUrlBar);
+        map.on('overlayremove', _updateUrlBar);
 
         // ─── ADS-B Live Aircraft Tracking ─────────────────────────
         const adsbMarkers = {};  // hex -> { marker }
@@ -3389,32 +3485,32 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             })
-            .then(r => r.json())
-            .then(result => {
-                if (result.status === 'ok') {
-                    // Update local data
-                    data.name = name;
-                    data.altitude = altitude;
-                    data.range = range;
+                .then(r => r.json())
+                .then(result => {
+                    if (result.status === 'ok') {
+                        // Update local data
+                        data.name = name;
+                        data.altitude = altitude;
+                        data.range = range;
 
-                    // Redraw on map
-                    if (isNode) drawNode(data);
-                    else drawGateway(data);
+                        // Redraw on map
+                        if (isNode) drawNode(data);
+                        else drawGateway(data);
 
-                    refreshConnections();
-                    renderSidebar();
+                        refreshConnections();
+                        renderSidebar();
 
-                    // Switch back to view mode with updated data
-                    devicePanelEditMode = false;
-                    renderDevicePanelView();
-                } else {
-                    alert('Failed to update: ' + result.message);
-                }
-            })
-            .catch(err => {
-                console.error('Error saving device:', err);
-                alert('An error occurred. Check the console.');
-            });
+                        // Switch back to view mode with updated data
+                        devicePanelEditMode = false;
+                        renderDevicePanelView();
+                    } else {
+                        alert('Failed to update: ' + result.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error saving device:', err);
+                    alert('An error occurred. Check the console.');
+                });
         }
 
         function deleteDeviceFromPanel() {
