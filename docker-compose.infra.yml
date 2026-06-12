@@ -1,0 +1,108 @@
+# ─────────────────────────────────────────────────────────
+# DIVS Infrastructure — Postgres + Backup Sidecar
+# Keep this running at all times so the database (and
+# therefore the /uplink endpoint's data store) stays
+# available even when the Flask server is stopped.
+#
+# Usage:
+#   docker compose -f docker-compose.infra.yml up -d
+#   docker compose -f docker-compose.infra.yml down
+# ─────────────────────────────────────────────────────────
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: DIVS-postgres
+    restart: always
+    env_file: .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 2G
+          pids: 200
+        reservations:
+          cpus: "0.25"
+          memory: 512M
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  db-backup:
+    image: postgres:15
+    container_name: DIVS-db-backup
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./backups:/backups
+      - ./db-backup.sh:/db-backup.sh:ro
+      - ./init.sql:/init.sql:ro
+    entrypoint: ["bash", "/db-backup.sh"]
+    stop_grace_period: 30s
+    networks:
+      - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+          pids: 50
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  uplink-receiver:
+    build: ./Uplink
+    container_name: DIVS-uplink
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: .env
+    volumes:
+      - ./Uplink:/app
+    networks:
+      - divs-net
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+          pids: 50
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+
+networks:
+  divs-net:
+    external: true

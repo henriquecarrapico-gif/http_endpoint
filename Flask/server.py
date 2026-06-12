@@ -4,6 +4,7 @@ import psycopg2
 from urllib.request import urlopen, Request, build_opener, HTTPRedirectHandler
 from urllib.error import URLError
 import json
+import gzip
 from psycopg2.extras import execute_values
 import os
 from database import connect_to_database, close_db_connection
@@ -687,9 +688,17 @@ def adsb_track_proxy(icao24):
     trace_url = f"https://globe.adsb.lol/data/traces/{last2}/trace_full_{hex_lower}.json"
     try:
         log.info(f"track: trying globe trace for {hex_lower}")
-        req = Request(trace_url, headers={"User-Agent": ua, "Accept": "application/json"})
+        req = Request(trace_url, headers={
+            "User-Agent": ua,
+            "Accept": "application/json",
+            "Accept-Encoding": "gzip, deflate"
+        })
         with urlopen(req, timeout=15, context=ctx) as resp:
-            raw = resp.read().decode()
+            raw_bytes = resp.read()
+            # Handle gzip-compressed responses (0x1f 0x8b = gzip magic)
+            if raw_bytes[:2] == b'\x1f\x8b':
+                raw_bytes = gzip.decompress(raw_bytes)
+            raw = raw_bytes.decode('utf-8')
             log.info(f"track: globe returned {len(raw)} bytes (status {resp.getcode()})")
             if raw.strip():
                 trace_data = json.loads(raw)

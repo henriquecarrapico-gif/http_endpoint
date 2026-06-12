@@ -1,74 +1,19 @@
+# ─────────────────────────────────────────────────────────
+# DIVS Flask Server
+# Requires the infrastructure stack (docker-compose.infra.yml)
+# to be running first so postgres is available on divs-net.
+#
+# Usage:
+#   docker compose up -d          # start the server
+#   docker compose down           # stop the server (DB stays up)
+#   docker compose up -d --build  # rebuild & restart
+# ─────────────────────────────────────────────────────────
+
 services:
-  postgres:
-    image: postgres:15
-    container_name: DIVS-postgres
-    restart: always
-    env_file: .env
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - divs-net
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 2G
-          pids: 200
-        reservations:
-          cpus: "0.25"
-          memory: 512M
-    logging:
-      driver: json-file
-      options:
-        max-size: "50m"
-        max-file: "5"
-
-  db-backup:
-    image: postgres:15
-    container_name: DIVS-db-backup
-    restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
-    env_file: .env
-    volumes:
-      - ./backups:/backups
-      - ./db-backup.sh:/db-backup.sh:ro
-      - ./init.sql:/init.sql:ro
-    entrypoint: ["bash", "/db-backup.sh"]
-    stop_grace_period: 30s
-    networks:
-      - divs-net
-    deploy:
-      resources:
-        limits:
-          cpus: "0.25"
-          memory: 256M
-          pids: 50
-        reservations:
-          cpus: "0.10"
-          memory: 64M
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   flask-server:
     build: ./Flask
     container_name: DIVS-flask
     restart: always
-    depends_on:
-      postgres:
-        condition: service_healthy
     env_file: .env
     volumes:
       - ./Flask:/app # Mount source code for live container reload
@@ -90,9 +35,6 @@ services:
       options:
         max-size: "25m"
         max-file: "5"
-
-volumes:
-  postgres_data:
 
 networks:
   divs-net:
